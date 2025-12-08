@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能刷题系统 - 高效学习助手</title>
+    <!-- 核心库 CDN 引入 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script> <!-- 修复：使用生产版 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.21/mammoth.browser.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 自定义样式 -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        :root {
+            --primary: #07c160;
+            --primary-light: #19be6b;
+            --secondary: #f5f5f5;
+            --accent: #ff6900;
+            --danger: #fa5151;
+            --success: #19be6b;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --bg-white: #ffffff;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        * {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .hero-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+        }
+        .hero-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.1);
+        }
+        .card {
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+        }
+        .btn-primary:hover {
+            background: var(--primary-light);
+            transform: scale(1.02);
+        }
+        .btn-secondary {
+            background: var(--secondary);
+            color: var(--text-primary);
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+        }
+        .btn-danger:hover {
+            background: #e64545;
+            transform: scale(1.02);
+        }
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 8px;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        .nav-tab {
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .nav-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        .nav-tab:hover:not(.active) {
+            background: var(--secondary);
+        }
+        .question-option {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .question-option:hover {
+            border-color: var(--primary);
+            background: rgba(7, 193, 96, 0.05);
+        }
+        .question-option.selected {
+            border-color: var(--primary);
+            background: rgba(7, 193, 96, 0.1);
+        }
+        .question-option.correct {
+            border-color: var(--success);
+            background: rgba(25, 190, 107, 0.1);
+        }
+        .question-option.wrong {
+            border-color: var(--danger);
+            background: rgba(250, 81, 81, 0.1);
+        }
+        .question-option.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .slider-container {
+            position: relative;
+            margin: 20px 0;
+        }
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .file-upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.5);
+        }
+        .file-upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(7, 193, 96, 0.05);
+        }
+        .file-upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(7, 193, 96, 0.1);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .stats-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+        .slide-enter-active, .slide-leave-active {
+            transition: all 0.3s ease;
+        }
+        .slide-enter-from {
+            transform: translateX(100px);
+            opacity: 0;
+        }
+        .slide-leave-to {
+            transform: translateX(-100px);
+            opacity: 0;
+        }
+        @media (max-width: 768px) {
+            .mobile-full {
+                width: 100%;
+                margin: 8px 0;
+            }
+            .mobile-stack {
+                flex-direction: column;
+            }
+            .mobile-padding {
+                padding: 16px;
+            }
+            /* 移动端底部导航样式 */
+            .bottom-nav button.active {
+                color: #07c160;
+                background: rgba(7, 193, 96, 0.1);
+            }
+            /* 移动端内容区域底部间距 */
+            body {
+                padding-bottom: 80px;
+            }
+            /* 移动端对话框样式优化 */
+            .mobile-dialog {
+                margin: 16px;
+                max-height: calc(100vh - 32px);
+            }
+        }
+        /* 底部导航激活状态 */
+        .bottom-nav button.active {
+            color: #07c160;
+        }
+        /* 答案显示样式 */
+        .answer-show {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+        .answer-correct {
+            background: #f0fdf4;
+            border-color: #16a34a;
+        }
+        .answer-wrong {
+            background: #fef2f2;
+            border-color: #dc2626;
+        }
+        .real-time-answer {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        @media (max-width: 768px) {
+            .real-time-answer {
+                position: fixed;
+                bottom: 80px;
+                top: auto;
+                right: 10px;
+                left: 10px;
+                transform: none;
+                max-width: none;
+            }
+        }
+        /* 格式说明样式 */
+        .format-sample {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 导航栏 -->
+        <nav class="bg-white shadow-sm sticky top-0 z-50">
+            <div class="max-w-6xl mx-auto px-4 py-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-2xl font-bold text-green-600">📚 智能刷题</div>
+                    </div>
+                    <div class="hidden md:flex space-x-2">
+                        <div class="nav-tab" :class="{active: currentMode === 'home'}" @click="switchMode('home')">
+                            首页
+                        </div>
+                        <div class="nav-tab" :class="{active: currentMode === 'config'}" @click="switchMode('config')">
+                            配置
+                        </div>
+                        <div class="nav-tab" :class="{active: currentMode === 'exam'}" @click="switchMode('exam')">
+                            刷题
+                        </div>
+                        <div class="nav-tab" :class="{active: currentMode === 'mistakes'}" @click="switchMode('mistakes')">
+                            错题
+                        </div>
+                        <div class="nav-tab" :class="{active: currentMode === 'manage'}" @click="switchMode('manage')">
+                            管理
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button class="btn-secondary text-sm" @click="shareLink">
+                            分享
+                        </button>
+                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center" v-if="!currentUser">
+                            <span class="text-green-600 text-sm cursor-pointer" @click="showLoginDialog = true">👤</span>
+                        </div>
+                        <div class="flex items-center space-x-2" v-else>
+                            <span class="text-sm text-gray-600">{{ currentUser.username }}</span>
+                            <button class="text-red-600 text-sm" @click="logout">退出</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <!-- 主内容区域 -->
+        <main class="max-w-6xl mx-auto px-4 py-6">
+            <!-- 首页模式 -->
+            <transition name="fade" mode="out-in">
+                <div v-if="currentMode === 'home'" key="home">
+                    <!-- Hero 区域 -->
+                    <div class="hero-bg rounded-2xl p-8 mb-8 relative">
+                        <div class="relative z-10">
+                            <h1 class="text-4xl font-bold text-white mb-4">
+                                智能刷题，高效学习
+                            </h1>
+                            <p class="text-xl text-white mb-6">
+                                支持多种题型练习，支持导入题库，让学习更简单
+                            </p>
+                            <div class="flex flex-wrap gap-4">
+                                <button class="btn-primary bg-white text-green-600 hover:bg-gray-100" @click="switchMode('config')">
+                                    开始考试
+                                </button>
+                                <button class="btn-secondary bg-white bg-opacity-20 text-white hover:bg-opacity-30" @click="startPracticeMode">
+                                    练习模式
+                                </button>
+                                <button class="btn-danger bg-orange-500 text-white hover:bg-orange-600" @click="switchMode('mistakes')">
+                                    错题复习
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 学习统计 -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="stats-card">
+                            <div class="stats-number">{{ totalQuestions }}</div>
+                            <div class="stats-label">总题数</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="stats-number">{{ correctRate }}%</div>
+                            <div class="stats-label">正确率</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="stats-number">{{ studyHours }}</div>
+                            <div class="stats-label">学习时长(h)</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="stats-number">{{ mistakeCount }}</div>
+                            <div class="stats-label">错题数</div>
+                        </div>
+                    </div>
+                    <!-- 功能卡片 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="card p-6 cursor-pointer" @click="switchMode('config')">
+                            <div class="flex items-center mb-4">
+                                <div class="text-4xl mr-4">📝</div>
+                                <h3 class="text-xl font-bold">考试模式</h3>
+                            </div>
+                            <p class="text-gray-600 mb-4">模拟真实考试环境，倒计时答题，交卷后查看成绩</p>
+                            <div class="text-green-600 font-medium">立即开始 →</div>
+                        </div>
+                        <div class="card p-6 cursor-pointer" @click="startPracticeMode">
+                            <div class="flex items-center mb-4">
+                                <div class="text-4xl mr-4">📖</div>
+                                <h3 class="text-xl font-bold">练习模式</h3>
+                            </div>
+                            <div class="text-gray-600 mb-4">
+                                <p>• 自由练习，即时查看答案解析</p>
+                                <p>• 巩固知识点，无时间限制</p>
+                                <p>• 支持查看答案功能</p>
+                            </div>
+                            <div class="text-green-600 font-medium">开始练习 →</div>
+                        </div>
+                        <div class="card p-6 cursor-pointer" @click="switchMode('mistakes')">
+                            <div class="flex items-center mb-4">
+                                <div class="text-4xl mr-4">❌</div>
+                                <h3 class="text-xl font-bold">错题管理</h3>
+                            </div>
+                            <p class="text-gray-600 mb-4">自动收集错题，针对性复习，提高学习效率</p>
+                            <div class="text-green-600 font-medium">查看错题 →</div>
+                        </div>
+                    </div>
+                    <!-- 题库管理 -->
+                    <div class="card p-6">
+                        <h3 class="text-2xl font-bold mb-6">题库管理</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div>
+                                <h4 class="text-lg font-semibold mb-4">导入题库</h4>
+                                <div class="file-upload-area" @drop="handleFileDrop" @dragover="handleDragOver" @dragleave="handleDragLeave" @click="triggerFileInput">
+                                    <div class="text-4xl mb-4">📁</div>
+                                    <div class="text-lg font-medium mb-2">拖拽文件到此处或点击上传</div>
+                                    <div class="text-sm text-gray-500">支持 .txt, .docx, .json, .xlsx 格式文件</div>
+                                </div>
+                                <input type="file" ref="fileInput" multiple accept=".txt,.docx,.json,.xlsx" @change="handleFileSelect" class="hidden">
+                                <div class="mt-4">
+                                    <button class="btn-primary w-full" @click="showFormatSample = true">
+                                        查看格式说明
+                                    </button>
+                                </div>
+                                <div class="mt-4" v-if="uploadProgress > 0">
+                                    <div class="flex justify-between text-sm mb-2">
+                                        <span>导入进度</span>
+                                        <span>{{ uploadProgress }}%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" :style="{width: uploadProgress + '%'}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-semibold mb-4">题库操作</h4>
+                                <div class="space-y-3">
+                                    <button class="btn-secondary w-full" @click="loadSampleQuestions">
+                                        加载示例题库
+                                    </button>
+                                    <button class="btn-danger w-full" @click="clearQuestionBank">
+                                        清空题库
+                                    </button>
+                                    <button class="btn-primary w-full" @click="switchMode('manage')">
+                                        题目管理
+                                    </button>
+                                </div>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                                    <h5 class="font-semibold mb-2">当前题库状态</h5>
+                                    <div class="space-y-1 text-sm">
+                                        <div>总题数：{{ questionBank.length }}</div>
+                                        <div>单选题：{{ questionTypeCount.single }}</div>
+                                        <div>多选题：{{ questionTypeCount.multiple }}</div>
+                                        <div>判断题：{{ questionTypeCount.judge }}</div>
+                                        <div>填空题：{{ questionTypeCount.fill }}</div>
+                                        <div>简答题：{{ questionTypeCount.essay }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+            <!-- 配置模式 -->
+            <transition name="fade" mode="out-in">
+                <div v-if="currentMode === 'config'" key="config">
+                    <div class="card p-6">
+                        <h2 class="text-2xl font-bold mb-6">考试配置</h2>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div>
+                                <h3 class="text-lg font-semibold mb-4">题型设置</h3>
+                                <div class="space-y-6">
+                                    <div class="slider-container">
+                                        <div class="flex justify-between mb-2">
+                                            <label>单选题</label>
+                                            <span>{{ examConfig.single }} 题</span>
+                                        </div>
+                                        <input type="range" v-model="examConfig.single" min="0" :max="questionTypeCount.single" class="slider">
+                                    </div>
+                                    <div class="slider-container">
+                                        <div class="flex justify-between mb-2">
+                                            <label>多选题</label>
+                                            <span>{{ examConfig.multiple }} 题</span>
+                                        </div>
+                                        <input type="range" v-model="examConfig.multiple" min="0" :max="questionTypeCount.multiple" class="slider">
+                                    </div>
+                                    <div class="slider-container">
+                                        <div class="flex justify-between mb-2">
+                                            <label>判断题</label>
+                                            <span>{{ examConfig.judge }} 题</span>
+                                        </div>
+                                        <input type="range" v-model="examConfig.judge" min="0" :max="questionTypeCount.judge" class="slider">
+                                    </div>
+                                    <div class="slider-container">
+                                        <div class="flex justify-between mb-2">
+                                            <label>填空题</label>
+                                            <span>{{ examConfig.fill }} 题</span>
+                                        </div>
+                                        <input type="range" v-model="examConfig.fill" min="0" :max="questionTypeCount.fill" class="slider">
+                                    </div>
+                                    <div class="slider-container">
+                                        <div class="flex justify-between mb-2">
+                                            <label>简答题</label>
+                                            <span>{{ examConfig.essay }} 题</span>
+                                        </div>
+                                        <input type="range" v-model="examConfig.essay" min="0" :max="questionTypeCount.essay" class="slider">
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold mb-4">考试设置</h3>
+                                <div class="space-y-6">
+                                    <div class="slider-container">
+                                        <div class="flex justify-between mb-2">
+                                            <label>考试时间</label>
+                                            <span>{{ examConfig.time }} 分钟</span>
+                                        </div>
+                                        <input type="range" v-model="examConfig.time" min="5" max="180" class="slider">
+                                    </div>
+                                    <div>
+                                        <label class="block mb-3 font-medium">抽题规则</label>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center">
+                                                <input type="radio" v-model="examConfig.rule" value="random" class="mr-2">
+                                                <span>随机抽取</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input type="radio" v-model="examConfig.rule" value="tag" class="mr-2">
+                                                <span>按知识点筛选</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" v-model="examConfig.enableTimer" class="mr-2">
+                                            <span>启用计时功能</span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" v-model="examConfig.showAnswerImmediately" class="mr-2">
+                                            <span>考试中可查看答案</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+                                    <h4 class="font-semibold mb-2">考试概览</h4>
+                                    <div class="space-y-1 text-sm">
+                                        <div>总题数: {{ totalExamQuestions }} 题</div>
+                                        <div>考试时间: {{ examConfig.enableTimer ? examConfig.time + '分钟' : '不限时' }}</div>
+                                        <div>抽题方式: {{ examConfig.rule === 'random' ? '随机抽取' : '按知识点' }}</div>
+                                        <div>答案显示: {{ examConfig.showAnswerImmediately ? '支持查看答案' : '交卷后显示' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-center mt-8 space-x-4">
+                            <button class="btn-primary" @click="startExam">
+                                开始考试
+                            </button>
+                            <button class="btn-secondary" @click="resetConfig">
+                                重置配置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+            <!-- 考试/练习模式 -->
+            <transition name="fade" mode="out-in">
+                <div v-if="currentMode === 'exam'" key="exam">
+                    <div class="card p-6 mb-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold">
+                                {{ examMode === 'exam' ? '考试模式' : '练习模式' }}
+                            </h2>
+                            <div class="flex items-center space-x-4">
+                                <div class="text-lg font-semibold" :class="timerColor">
+                                    ⏰ {{ formattedTime }}
+                                </div>
+                                <button class="btn-secondary text-sm" @click="submitCurrentAnswer" v-if="!currentAnswerSubmitted && currentQuestion.type !== 'essay'">
+                                    提交答案
+                                </button>
+                                <button class="btn-secondary text-sm" @click="pauseExam" v-if="examMode === 'practice'">
+                                    暂停
+                                </button>
+                                <button class="btn-danger text-sm" @click="submitExam">
+                                    交卷
+                                </button>
+                            </div>
+                        </div>
+                        <!-- 进度条 -->
+                        <div class="mb-6">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span>进度</span>
+                                <span>{{ currentQuestionIndex + 1 }} / {{ currentQuestions.length }}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" :style="{width: examProgress + '%'}"></div>
+                            </div>
+                        </div>
+                        <!-- 题目内容 -->
+                        <div v-if="currentQuestion" class="mb-8">
+                            <div class="mb-4">
+                                <span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-sm mr-2">
+                                    {{ getQuestionTypeText(currentQuestion.type) }}
+                                </span>
+                                <span class="text-gray-500">第 {{ currentQuestionIndex + 1 }} 题</span>
+                                <span v-if="currentAnswerSubmitted" class="ml-2 inline-block px-2 py-1 rounded text-xs" :class="isAnswerCorrect(currentQuestionIndex) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                                    {{ isAnswerCorrect(currentQuestionIndex) ? '已答对' : '已答错' }}
+                                </span>
+                            </div>
+                            <div class="text-lg mb-6" v-html="currentQuestion.content"></div>
+                            <!-- 选项 -->
+                            <div class="space-y-3 mb-6" v-if="currentQuestion.options && currentQuestion.options.length">
+                                <div v-for="(option, index) in currentQuestion.options" 
+                                     :key="index"
+                                     class="question-option"
+                                     :class="getOptionClass(index)"
+                                     @click="selectOption(index)">
+                                    <div class="flex items-center">
+                                        <span class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 mr-3 font-semibold">
+                                            {{ String.fromCharCode(65 + index) }}
+                                        </span>
+                                        <span v-html="option"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 简答题输入区域 -->
+                            <div v-if="currentQuestion.type === 'essay'" class="mb-6">
+                                <label class="block text-sm font-medium mb-2">请输入您的答案：</label>
+                                <textarea 
+                                    v-model="userAnswers[currentQuestionIndex]" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg" 
+                                    rows="4" 
+                                    placeholder="请输入您的答案..."
+                                    @input="saveEssayAnswer"
+                                    :disabled="currentAnswerSubmitted">
+                                </textarea>
+                            </div>
+                            <!-- 填空题输入区域 -->
+                            <div v-if="currentQuestion.type === 'fill'" class="mb-6">
+                                <label class="block text-sm font-medium mb-2">请输入答案：</label>
+                                <input 
+                                    type="text" 
+                                    v-model="userAnswers[currentQuestionIndex]" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg" 
+                                    placeholder="请输入答案..."
+                                    :disabled="currentAnswerSubmitted">
+                            </div>
+                            <!-- 查看答案按钮 -->
+                            <div class="mb-4" v-if="examMode === 'practice' || examConfig.showAnswerImmediately || currentAnswerSubmitted">
+                                <button class="btn-secondary" @click="showCurrentAnswer" v-if="!currentAnswerShown">
+                                    查看答案
+                                </button>
+                                <button class="btn-secondary" @click="hideCurrentAnswer" v-else>
+                                    隐藏答案
+                                </button>
+                            </div>
+                            <!-- 答案显示区域 -->
+                            <div v-if="currentAnswerShown" class="answer-show" :class="currentAnswerClass">
+                                <div class="mb-2">
+                                    <strong>正确答案：</strong> {{ formatAnswer(currentQuestion.answer) }}
+                                </div>
+                                <div v-if="currentQuestion.analysis">
+                                    <strong>解析：</strong> {{ currentQuestion.analysis }}
+                                </div>
+                                <div v-if="userAnswers[currentQuestionIndex] !== undefined && currentQuestion.type !== 'essay' && currentQuestion.type !== 'fill'">
+                                    <div v-if="isAnswerCorrect(currentQuestionIndex)">
+                                        ✅ 回答正确！
+                                    </div>
+                                    <div v-else>
+                                        ❌ 回答错误
+                                    </div>
+                                </div>
+                                <div v-if="(currentQuestion.type === 'essay' || currentQuestion.type === 'fill') && userAnswers[currentQuestionIndex]">
+                                    <div class="mt-2 p-2 bg-blue-50 rounded">
+                                        <strong>您的答案：</strong> {{ userAnswers[currentQuestionIndex] }}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 操作按钮 -->
+                            <div class="flex justify-between">
+                                <button class="btn-secondary" @click="previousQuestion" :disabled="currentQuestionIndex === 0">
+                                    上一题
+                                </button>
+                                <div class="flex space-x-3">
+                                    <button class="btn-secondary" @click="markQuestion">
+                                        {{ isCurrentQuestionMarked ? '取消标记' : '标记题目' }}
+                                    </button>
+                                    <button class="btn-primary" @click="nextQuestion" :disabled="currentQuestionIndex === currentQuestions.length - 1">
+                                        下一题
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 答题卡 -->
+                        <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+                            <h4 class="font-semibold mb-4">答题卡</h4>
+                            <div class="grid grid-cols-10 gap-2">
+                                <div v-for="(question, index) in currentQuestions" 
+                                     :key="index"
+                                     class="w-8 h-8 rounded-full flex items-center justify-center text-xs cursor-pointer"
+                                     :class="getAnswerCardClass(index)"
+                                     @click="jumpToQuestion(index)">
+                                    {{ index + 1 }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+            <!-- 错题本模式 -->
+            <transition name="fade" mode="out-in">
+                <div v-if="currentMode === 'mistakes'" key="mistakes">
+                    <div class="card p-6 mb-6">
+                        <h2 class="text-2xl font-bold mb-6">错题本</h2>
+                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            <div class="lg:col-span-1">
+                                <h3 class="font-semibold mb-4">筛选条件</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">题型</label>
+                                        <select v-model="mistakeFilter.type" class="w-full p-2 border rounded-lg">
+                                            <option value="">全部</option>
+                                            <option value="single">单选题</option>
+                                            <option value="multiple">多选题</option>
+                                            <option value="judge">判断题</option>
+                                            <option value="fill">填空题</option>
+                                            <option value="essay">简答题</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">时间范围</label>
+                                        <select v-model="mistakeFilter.timeRange" class="w-full p-2 border rounded-lg">
+                                            <option value="">全部</option>
+                                            <option value="today">今天</option>
+                                            <option value="week">本周</option>
+                                            <option value="month">本月</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" v-model="mistakeFilter.importantOnly" class="mr-2">
+                                            <span class="text-sm">只看重点错题</span>
+                                        </label>
+                                    </div>
+                                    <div class="mt-4">
+                                        <label class="block text-sm font-medium mb-2">题目管理</label>
+                                        <button class="btn-primary w-full mb-2" @click="startMistakePractice">
+                                            错题练习
+                                        </button>
+                                        <button class="btn-secondary w-full text-sm" @click="exportMistakes">
+                                            导出错题
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-3">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="text-gray-600">
+                                        共 {{ filteredMistakes.length }} 道错题
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="btn-secondary text-sm" @click="exportMistakes">
+                                            导出错题
+                                        </button>
+                                        <button class="btn-danger text-sm" @click="clearMistakes">
+                                            清空错题
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div v-for="(mistake, index) in filteredMistakes" :key="mistake.id" class="border rounded-lg p-4">
+                                        <div class="flex justify-between items-start mb-3">
+                                            <div>
+                                                <span class="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-sm mr-2">
+                                                    {{ getQuestionTypeText(mistake.type) }}
+                                                </span>
+                                                <span class="text-gray-500 text-sm">{{ formatDate(mistake.mistakeTime) }}</span>
+                                            </div>
+                                            <div class="flex space-x-2">
+                                                <button @click="toggleImportant(mistake)" class="text-sm" :class="mistake.isImportant ? 'text-orange-600' : 'text-gray-400'">
+                                                    {{ mistake.isImportant ? '⭐' : '☆' }}
+                                                </button>
+                                                <button @click="removeMistake(mistake)" class="text-red-600 text-sm">
+                                                    删除
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3" v-html="mistake.content"></div>
+                                        <div class="text-sm text-gray-600 mb-3">
+                                            <div><strong>正确答案：</strong> {{ formatAnswer(mistake.answer) }}</div>
+                                            <div><strong>您的答案：</strong> {{ formatAnswer(mistake.wrongAnswer) }}</div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="btn-primary text-sm" @click="reviewMistake(mistake)">
+                                                重新练习
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+            <!-- 管理页面 -->
+            <transition name="fade" mode="out-in">
+                <div v-if="currentMode === 'manage'" key="manage">
+                    <div class="card p-6">
+                        <h2 class="text-2xl font-bold mb-6">题目管理</h2>
+                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            <div class="lg:col-span-1">
+                                <h3 class="font-semibold mb-4">筛选条件</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">题型</label>
+                                        <select v-model="manageFilter.type" class="w-full p-2 border rounded-lg">
+                                            <option value="">全部</option>
+                                            <option value="single">单选题</option>
+                                            <option value="multiple">多选题</option>
+                                            <option value="judge">判断题</option>
+                                            <option value="fill">填空题</option>
+                                            <option value="essay">简答题</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">搜索</label>
+                                        <input type="text" v-model="manageFilter.search" placeholder="搜索题目内容..." class="w-full p-2 border rounded-lg">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-3">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="text-gray-600">
+                                        共 {{ filteredManageQuestions.length }} 道题目
+                                    </div>
+                                </div>
+                                <div class="question-manager space-y-4">
+                                    <div v-for="(question, index) in filteredManageQuestions" :key="question.id" class="border rounded-lg p-4 question-item">
+                                        <div class="flex justify-between items-start mb-3">
+                                            <div>
+                                                <span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-sm mr-2">
+                                                    {{ getQuestionTypeText(question.type) }}
+                                                </span>
+                                                <span class="text-gray-500 text-sm">#{{ index + 1 }}</span>
+                                            </div>
+                                            <div class="flex space-x-2">
+                                                <button @click="editQuestion(question)" class="text-blue-600 text-sm">
+                                                    编辑
+                                                </button>
+                                                <button @click="deleteQuestion(question)" class="text-red-600 text-sm">
+                                                    删除
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3" v-html="question.content.substring(0, 200) + (question.content.length > 200 ? '...' : '')"></div>
+                                        <div class="text-sm text-gray-600">
+                                            <div v-if="question.options && question.options.length">
+                                                <strong>选项:</strong> {{ question.options.length }} 个
+                                            </div>
+                                            <div v-if="question.analysis">
+                                                <strong>解析:</strong> {{ question.analysis.substring(0, 100) + (question.analysis.length > 100 ? '...' : '') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+        </main>
+        <!-- 登录对话框 -->
+        <div v-if="showLoginDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showLoginDialog = false">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4" @click.stop>
+                <h3 class="text-lg font-semibold mb-4 text-center">用户登录</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">用户名</label>
+                        <input 
+                            type="text" 
+                            v-model="loginForm.username" 
+                            class="w-full p-3 border border-gray-300 rounded-lg"
+                            placeholder="请输入用户名">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">密码</label>
+                        <input 
+                            type="password" 
+                            v-model="loginForm.password" 
+                            class="w-full p-3 border border-gray-300 rounded-lg"
+                            placeholder="请输入密码">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button class="btn-secondary" @click="showLoginDialog = false">
+                        取消
+                    </button>
+                    <button class="btn-primary" @click="login">
+                        登录
+                    </button>
+                </div>
+                <div class="mt-4 text-center">
+                    <p class="text-sm text-gray-600">首次登录将自动创建账户</p>
+                </div>
+            </div>
+        </div>
+        <!-- 题目类型选择对话框 -->
+        <div v-if="showQuestionTypeDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+                <h3 class="text-lg font-semibold mb-4">选择题库类型</h3>
+                <div class="space-y-3 mb-6">
+                    <div v-for="(question, index) in pendingQuestions" :key="index" class="border rounded-lg p-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-gray-600">题目 {{ index + 1 }}</span>
+                            <select v-model="question.selectedType" class="text-sm p-1 border rounded">
+                                <option value="single">单选题</option>
+                                <option value="multiple">多选题</option>
+                                <option value="judge">判断题</option>
+                                <option value="fill">填空题</option>
+                                <option value="essay">简答题</option>
+                            </select>
+                        </div>
+                        <div class="text-sm" v-html="question.content.substring(0, 100) + (question.content.length > 100 ? '...' : '')"></div>
+                        <label class="flex items-center mt-2">
+                            <input type="checkbox" v-model="question.selected" class="mr-2">
+                            <span class="text-sm">导入此题</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- 批量操作 -->
+                <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" v-model="selectAllPending" @change="toggleSelectAll" class="mr-2">
+                            <span class="text-sm">全选</span>
+                        </label>
+                        <select v-model="batchType" class="text-sm p-1 border rounded">
+                            <option value="">批量设置类型</option>
+                            <option value="single">单选题</option>
+                            <option value="multiple">多选题</option>
+                            <option value="judge">判断题</option>
+                            <option value="fill">填空题</option>
+                            <option value="essay">简答题</option>
+                        </select>
+                        <button @click="applyBatchType" class="btn-primary text-sm">应用</button>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button class="btn-secondary" @click="showQuestionTypeDialog = false">
+                        取消
+                    </button>
+                    <button class="btn-primary" @click="confirmImport">
+                        确认导入
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- 格式说明对话框 -->
+        <div v-if="showFormatSample" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
+                <h3 class="text-lg font-semibold mb-4">文件格式说明</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-medium mb-2">TXT格式样板：</h4>
+                        <div class="format-sample">
+**单选题**<br>
+1. 以下哪个是JavaScript的关键字？<br>
+   A. class<br>
+   B. function<br>
+   C. method<br>
+   D. type<br>
+   答案：B<br>
+   解析：function是JavaScript中定义函数的关键字<br>
+<br>
+**多选题**<br>
+<br>
+1. 以下哪些属于三剂类物资？<br>
+   A.催化剂<br>
+   B.添加剂<br>
+   C.溶剂<br>
+   D.阀门类<br>
+   答案：A,B,C<br>
+   解析：三剂类主要指催化剂、添加剂、溶剂等...
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium mb-2">Excel格式样板：</h4>
+                        <div class="format-sample">
+表头：题型 | 题干 | 选项A | 选项B | 选项C | 选项D | 答案 | 解析<br>
+示例：<br>
+single | 题目内容 | 选项1 | 选项2 | 选项3 | 选项4 | B | 解析内容
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium mb-2">JSON格式样板：</h4>
+                        <div class="format-sample">
+[<br>
+  {<br>
+    "type": "single",<br>
+    "content": "题目内容",<br>
+    "options": ["选项A", "选项B", "选项C", "选项D"],<br>
+    "answer": 1,<br>
+    "analysis": "解析内容"<br>
+  }<br>
+]
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end mt-6">
+                    <button class="btn-primary" @click="showFormatSample = false">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- 分享选项弹窗 -->
+        <div v-if="showQRCode" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showQRCode = false">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4" @click.stop>
+                <h3 class="text-lg font-semibold mb-4 text-center">分享学习应用</h3>
+                <div class="space-y-3 mb-4">
+                    <button class="btn-primary w-full" @click="copyLink">
+                        📋 复制分享链接
+                    </button>
+                    <button class="btn-secondary w-full" @click="exportData">
+                        💾 导出学习数据
+                    </button>
+                    <button class="btn-secondary w-full" @click="importData">
+                        📥 导入学习数据
+                    </button>
+                </div>
+                <!-- 二维码 -->
+                <div class="text-center mb-4">
+                    <div id="qrcode" class="inline-block"></div>
+                    <p class="text-xs text-gray-500 mt-2">扫码访问学习系统</p>
+                </div>
+                <div class="share-link text-center mb-4">
+                    <small>{{ currentUrl }}</small>
+                </div>
+                <p class="text-xs text-gray-500 text-center mb-4">
+                    链接分享更便捷，适合各种设备使用
+                </p>
+                <button class="btn-secondary w-full" @click="showQRCode = false">
+                    关闭
+                </button>
+            </div>
+        </div>
+        <!-- 实时答案显示 -->
+        <div v-if="showRealTimeAnswer && currentAnswerShown" class="real-time-answer">
+            <div class="text-sm font-semibold mb-2">答案</div>
+            <div :class="currentAnswerClass">
+                <div class="mb-1">
+                    <strong>正确答案：</strong> {{ formatAnswer(currentQuestion.answer) }}
+                </div>
+                <div v-if="currentQuestion.analysis">
+                    <strong>解析：</strong> {{ currentQuestion.analysis }}
+                </div>
+                <div v-if="userAnswers[currentQuestionIndex] !== undefined">
+                    <div v-if="isAnswerCorrect(currentQuestionIndex)" class="text-green-600">
+                        ✅ 回答正确！
+                    </div>
+                    <div v-else class="text-red-600">
+                        ❌ 回答错误
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 底部导航（移动端） -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40 bottom-nav" style="padding-bottom: env(safe-area-inset-bottom);">
+            <div class="flex justify-around py-2">
+                <button class="flex flex-col items-center p-2" :class="{active: currentMode === 'home'}" @click="switchMode('home')">
+                    <span class="text-xl mb-1">🏠</span>
+                    <span class="text-xs">首页</span>
+                </button>
+                <button class="flex flex-col items-center p-2" :class="{active: currentMode === 'config'}" @click="switchMode('config')">
+                    <span class="text-xl mb-1">⚙️</span>
+                    <span class="text-xs">配置</span>
+                </button>
+                <button class="flex flex-col items-center p-2" :class="{active: currentMode === 'exam'}" @click="switchMode('exam')">
+                    <span class="text-xl mb-1">📖</span>
+                    <span class="text-xs">刷题</span>
+                </button>
+                <button class="flex flex-col items-center p-2" :class="{active: currentMode === 'mistakes'}" @click="switchMode('mistakes')">
+                    <span class="text-xl mb-1">❌</span>
+                    <span class="text-xs">错题</span>
+                </button>
+                <button class="flex flex-col items-center p-2" :class="{active: currentMode === 'manage'}" @click="switchMode('manage')">
+                    <span class="text-xl mb-1">⚙️</span>
+                    <span class="text-xs">管理</span>
+                </button>
+            </div>
+        </div>
+        <!-- 移动端底部间距 -->
+        <div class="md:hidden h-16"></div>
+    </div>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    currentMode: 'home',
+                    examMode: 'exam', // 'exam' 或 'practice'
+                    currentUrl: window.location.href,
+                    // 用户系统
+                    currentUser: null,
+                    showLoginDialog: false,
+                    loginForm: {
+                        username: '',
+                        password: ''
+                    },
+                    // 题库数据
+                    questionBank: [],
+                    // 考试配置
+                    examConfig: {
+                        single: 0,
+                        multiple: 0,
+                        judge: 0,
+                        fill: 0,
+                        essay: 0,
+                        time: 60,
+                        rule: 'random',
+                        enableTimer: true,
+                        showAnswerImmediately: true
+                    },
+                    // 当前考试数据
+                    currentQuestions: [],
+                    currentQuestionIndex: 0,
+                    userAnswers: {},
+                    submittedAnswers: new Set(),
+                    markedQuestions: new Set(),
+                    examTimer: null,
+                    remainingTime: 0,
+                    examStartTime: 0,
+                    currentAnswerShown: false,
+                    currentAnswerSubmitted: false,
+                    // 错题本
+                    mistakeBank: [],
+                    mistakeFilter: {
+                        type: '',
+                        timeRange: '',
+                        importantOnly: false
+                    },
+                    // 题目管理
+                    manageFilter: {
+                        type: '',
+                        search: ''
+                    },
+                    // 文件上传
+                    uploadProgress: 0,
+                    pendingQuestions: [],
+                    showQuestionTypeDialog: false,
+                    showFormatSample: false,
+                    isDragging: false,
+                    // 分享
+                    showQRCode: false,
+                    showRealTimeAnswer: false,
+                    // 学习统计
+                    studyStats: {
+                        totalQuestions: 0,
+                        correctAnswers: 0,
+                        totalStudyTime: 0,
+                        examRecords: []
+                    },
+                    // 批量操作
+                    selectAllPending: false,
+                    batchType: '',
+                    // 👇 新增：为编辑功能添加的数据属性 👇
+                    editingQuestion: null,
+                    showEditDialog: false
+                    // 👆 新增结束 👆
+                }
+            },
+            computed: {
+                totalQuestions() {
+                    return this.questionBank.length;
+                },
+                correctRate() {
+                    if (this.studyStats.totalQuestions === 0) return 0;
+                    return Math.round((this.studyStats.correctAnswers / this.studyStats.totalQuestions) * 100);
+                },
+                studyHours() {
+                    return Math.round(this.studyStats.totalStudyTime / 3600 * 10) / 10;
+                },
+                mistakeCount() {
+                    return this.mistakeBank.length;
+                },
+                questionTypeCount() {
+                    const count = {
+                        single: 0,
+                        multiple: 0,
+                        judge: 0,
+                        fill: 0,
+                        essay: 0
+                    };
+                    this.questionBank.forEach(q => {
+                        if (count.hasOwnProperty(q.type)) {
+                            count[q.type]++;
+                        }
+                    });
+                    return count;
+                },
+                totalExamQuestions() {
+                    return this.examConfig.single + this.examConfig.multiple + 
+                           this.examConfig.judge + this.examConfig.fill + this.examConfig.essay;
+                },
+                currentQuestion() {
+                    if (this.currentQuestions.length === 0) return null;
+                    return this.currentQuestions[this.currentQuestionIndex];
+                },
+                examProgress() {
+                    if (this.currentQuestions.length === 0) return 0;
+                    return ((this.currentQuestionIndex + 1) / this.currentQuestions.length) * 100;
+                },
+                formattedTime() {
+                    const minutes = Math.floor(this.remainingTime / 60);
+                    const seconds = this.remainingTime % 60;
+                    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                },
+                timerColor() {
+                    if (this.remainingTime <= 60) return 'text-red-600';
+                    if (this.remainingTime <= 300) return 'text-orange-600';
+                    return 'text-green-600';
+                },
+                isCurrentQuestionMarked() {
+                    return this.markedQuestions.has(this.currentQuestionIndex);
+                },
+                currentAnswerClass() {
+                    if (this.userAnswers[this.currentQuestionIndex] === undefined) {
+                        return '';
+                    }
+                    return this.isAnswerCorrect(this.currentQuestionIndex) ? 'answer-correct' : 'answer-wrong';
+                },
+                filteredMistakes() {
+                    let filtered = this.mistakeBank;
+                    if (this.mistakeFilter.type) {
+                        filtered = filtered.filter(m => m.type === this.mistakeFilter.type);
+                    }
+                    if (this.mistakeFilter.timeRange) {
+                        const now = new Date();
+                        const filterDate = new Date();
+                        switch (this.mistakeFilter.timeRange) {
+                            case 'today':
+                                filterDate.setDate(now.getDate() - 1);
+                                break;
+                            case 'week':
+                                filterDate.setDate(now.getDate() - 7);
+                                break;
+                            case 'month':
+                                filterDate.setMonth(now.getMonth() - 1);
+                                break;
+                        }
+                        if (this.mistakeFilter.timeRange !== '') {
+                            filtered = filtered.filter(m => new Date(m.mistakeTime) >= filterDate);
+                        }
+                    }
+                    if (this.mistakeFilter.importantOnly) {
+                        filtered = filtered.filter(m => m.isImportant);
+                    }
+                    return filtered;
+                },
+                totalStudySessions() {
+                    return this.studyStats.examRecords.length;
+                },
+                filteredManageQuestions() {
+                    let filtered = this.questionBank;
+                    if (this.manageFilter.type) {
+                        filtered = filtered.filter(q => q.type === this.manageFilter.type);
+                    }
+                    if (this.manageFilter.search) {
+                        filtered = filtered.filter(q => 
+                            q.content.toLowerCase().includes(this.manageFilter.search.toLowerCase())
+                        );
+                    }
+                    return filtered;
+                }
+            },
+            methods: {
+                // 用户系统
+                login() {
+                    if (!this.loginForm.username.trim()) {
+                        alert('请输入用户名！');
+                        return;
+                    }
+                    // 模拟登录/注册
+                    const userId = 'user_' + this.loginForm.username;
+                    this.currentUser = {
+                        id: userId,
+                        username: this.loginForm.username
+                    };
+                    // 加载用户数据
+                    this.loadUserData();
+                    this.showLoginDialog = false;
+                    this.loginForm = { username: '', password: '' };
+                    alert('登录成功！');
+                },
+                logout() {
+                    if (confirm('确定要退出登录吗？')) {
+                        this.saveUserData();
+                        this.currentUser = null;
+                        this.clearAllData();
+                        alert('已退出登录！');
+                    }
+                },
+                loadUserData() {
+                    if (!this.currentUser) return;
+                    const userData = localStorage.getItem(`examAppData_${this.currentUser.id}`);
+                    if (userData) {
+                        try {
+                            const data = JSON.parse(userData);
+                            if (data.questionBank) this.questionBank = data.questionBank;
+                            if (data.mistakeBank) this.mistakeBank = data.mistakeBank;
+                            if (data.studyStats) this.studyStats = data.studyStats;
+                        } catch (e) {
+                            console.error('用户数据加载失败:', e);
+                        }
+                    } else {
+                        // 新用户加载示例题库
+                        this.loadSampleQuestions();
+                    }
+                },
+                saveUserData() {
+                    if (!this.currentUser) return;
+                    const data = {
+                        questionBank: this.questionBank,
+                        mistakeBank: this.mistakeBank,
+                        studyStats: this.studyStats
+                    };
+                    localStorage.setItem(`examAppData_${this.currentUser.id}`, JSON.stringify(data));
+                },
+                clearAllData() {
+                    this.questionBank = [];
+                    this.mistakeBank = [];
+                    this.studyStats = {
+                        totalQuestions: 0,
+                        correctAnswers: 0,
+                        totalStudyTime: 0,
+                        examRecords: []
+                    };
+                },
+                // 模式切换
+                switchMode(mode) {
+                    // 如果从考试页面离开，清空考试数据
+                    if (this.currentMode === 'exam' && mode !== 'exam') {
+                        this.clearExamData();
+                    }
+                    this.currentMode = mode;
+                    this.saveUserData();
+                },
+                // 清空考试数据
+                clearExamData() {
+                    if (this.examTimer) {
+                        clearInterval(this.examTimer);
+                        this.examTimer = null;
+                    }
+                    this.currentQuestions = [];
+                    this.currentQuestionIndex = 0;
+                    this.userAnswers = {};
+                    this.submittedAnswers.clear();
+                    this.markedQuestions.clear();
+                    this.remainingTime = 0;
+                    this.currentAnswerShown = false;
+                    this.currentAnswerSubmitted = false;
+                },
+                // 开始练习模式
+                startPracticeMode() {
+                    if (this.questionBank.length === 0) {
+                        alert('请先导入题库或加载示例题库！');
+                        return;
+                    }
+                    this.examMode = 'practice';
+                    this.currentQuestions = this.shuffleArray([...this.questionBank]);
+                    this.currentMode = 'exam';
+                    this.currentQuestionIndex = 0;
+                    this.userAnswers = {};
+                    this.markedQuestions.clear();
+                    this.currentAnswerShown = true; // 练习模式默认显示答案
+                    this.currentAnswerSubmitted = false;
+                    this.submittedAnswers.clear();
+                    this.examStartTime = Date.now();
+                    this.remainingTime = 0;
+                },
+                // 开始考试
+                startExam() {
+                    if (this.questionBank.length === 0) {
+                        alert('请先导入题库或加载示例题库！');
+                        return;
+                    }
+                    if (this.totalExamQuestions === 0) {
+                        alert('请至少选择一道题目！');
+                        return;
+                    }
+                    // 根据配置生成试卷
+                    this.generateExamPaper();
+                    this.examMode = 'exam';
+                    this.currentMode = 'exam';
+                    this.currentQuestionIndex = 0;
+                    this.userAnswers = {};
+                    this.markedQuestions.clear();
+                    this.currentAnswerShown = false;
+                    this.currentAnswerSubmitted = false;
+                    this.submittedAnswers.clear();
+                    this.examStartTime = Date.now();
+                    this.remainingTime = this.examConfig.time * 60;
+                    if (this.examConfig.enableTimer) {
+                        this.startTimer();
+                    }
+                },
+                // 生成试卷
+                generateExamPaper() {
+                    const questions = [];
+                    // 按题型抽取题目
+                    const typeConfig = {
+                        single: Math.min(this.examConfig.single, this.questionTypeCount.single),
+                        multiple: Math.min(this.examConfig.multiple, this.questionTypeCount.multiple),
+                        judge: Math.min(this.examConfig.judge, this.questionTypeCount.judge),
+                        fill: Math.min(this.examConfig.fill, this.questionTypeCount.fill),
+                        essay: Math.min(this.examConfig.essay, this.questionTypeCount.essay)
+                    };
+                    Object.keys(typeConfig).forEach(type => {
+                        const count = typeConfig[type];
+                        if (count > 0) {
+                            const typeQuestions = this.questionBank.filter(q => q.type === type);
+                            const shuffled = this.shuffleArray(typeQuestions);
+                            questions.push(...shuffled.slice(0, count));
+                        }
+                    });
+                    this.currentQuestions = this.examConfig.rule === 'random' ? 
+                        this.shuffleArray(questions) : questions;
+                },
+                // 加载示例题库
+                loadSampleQuestions() {
+                    const sampleQuestions = [
+                        {
+                            id: 'q1',
+                            type: 'single',
+                            content: '以下哪个是 Vue 3 的 Composition API 的核心函数？',
+                            options: [
+                                'createApp',
+                                'ref',
+                                'component',
+                                'mount'
+                            ],
+                            answer: 1,
+                            analysis: 'ref 是 Composition API 的核心函数，用于创建响应式数据。',
+                            difficulty: 2,
+                            tags: ['vue', 'composition-api']
+                        },
+                        {
+                            id: 'q2',
+                            type: 'multiple',
+                            content: '以下哪些是 JavaScript 的基本数据类型？',
+                            options: [
+                                'String',
+                                'Number',
+                                'Array',
+                                'Object',
+                                'Boolean'
+                            ],
+                            answer: [0, 1, 4],
+                            analysis: 'JavaScript 的基本数据类型包括：String、Number、Boolean、Null、Undefined、Symbol、BigInt。Array 和 Object 是引用类型。',
+                            difficulty: 1,
+                            tags: ['javascript', 'basics']
+                        },
+                        {
+                            id: 'q3',
+                            type: 'judge',
+                            content: 'CSS 中的 flexbox 布局只能用于水平布局。',
+                            options: ['正确', '错误'],
+                            answer: 1,
+                            analysis: 'Flexbox 既支持水平布局（flex-direction: row），也支持垂直布局（flex-direction: column）。',
+                            difficulty: 2,
+                            tags: ['css', 'flexbox']
+                        },
+                        {
+                            id: 'q4',
+                            type: 'fill',
+                            content: 'JavaScript 中使用 ______ 关键字来声明常量。',
+                            options: [],
+                            answer: 'const',
+                            analysis: 'const 关键字用于声明常量，声明后不能再重新赋值。',
+                            difficulty: 1,
+                            tags: ['javascript', 'basics']
+                        },
+                        {
+                            id: 'q5',
+                            type: 'essay',
+                            content: '请简述 Vue 3 相对于 Vue 2 的主要改进点。',
+                            options: [],
+                            answer: 'Vue 3 的主要改进包括：1. 性能提升（更快的渲染速度、更小的包体积）；2. Composition API 提供更灵活的代码组织方式；3. 更好的 TypeScript 支持；4. 新增 Fragment、Teleport、Suspense 等内置组件；5. 响应式系统使用 Proxy 替代 Object.defineProperty。',
+                            analysis: 'Vue 3 在性能、开发体验、TypeScript 支持等方面都有显著提升。',
+                            difficulty: 3,
+                            tags: ['vue', 'composition-api']
+                        }
+                    ];
+                    this.questionBank = sampleQuestions;
+                    this.saveUserData();
+                },
+                // 文件处理相关方法
+                triggerFileInput() {
+                    this.$refs.fileInput.click();
+                },
+                handleFileSelect(event) {
+                    const files = event.target.files;
+                    if (files.length > 0) {
+                        this.processFiles(files);
+                    }
+                },
+                handleFileDrop(event) {
+                    event.preventDefault();
+                    this.isDragging = false;
+                    const files = event.dataTransfer.files;
+                    if (files.length > 0) {
+                        this.processFiles(files);
+                    }
+                },
+                handleDragOver(event) {
+                    event.preventDefault();
+                    this.isDragging = true;
+                },
+                handleDragLeave(event) {
+                    event.preventDefault();
+                    this.isDragging = false;
+                },
+                async processFiles(files) {
+                    this.uploadProgress = 0;
+                    const totalFiles = files.length;
+                    let processedFiles = 0;
+                    for (let file of files) {
+                        try {
+                            await this.processFile(file);
+                            processedFiles++;
+                            this.uploadProgress = Math.round((processedFiles / totalFiles) * 100);
+                        } catch (error) {
+                            console.error('文件处理错误:', error);
+                            alert(`文件 ${file.name} 处理失败: ${error.message}`);
+                        }
+                    }
+                    this.uploadProgress = 0;
+                    this.saveUserData();
+                },
+                async processFile(file) {
+                    let questions = [];
+                    const fileName = file.name.toLowerCase();
+                    try {
+                        if (fileName.endsWith('.json')) {
+                            questions = await this.parseJSON(file);
+                        } else if (fileName.endsWith('.txt')) {
+                            questions = await this.parseTXT(file);
+                        } else if (fileName.endsWith('.xlsx')) {
+                            questions = await this.parseExcel(file);
+                        } else if (fileName.endsWith('.docx')) {
+                            questions = await this.parseDocx(file);
+                        } else {
+                            throw new Error('不支持的文件格式');
+                        }
+                        if (questions.length > 0) {
+                            // 为每个题目添加ID和默认类型
+                            questions = questions.map((q, index) => ({
+                                ...q,
+                                id: q.id || `import_${Date.now()}_${index}`,
+                                selectedType: q.type || 'single',
+                                selected: true
+                            }));
+                            this.pendingQuestions = questions;
+                            this.showQuestionTypeDialog = true;
+                        } else {
+                            alert('未找到有效的题目数据');
+                        }
+                    } catch (error) {
+                        console.error('文件解析错误:', error);
+                        throw new Error(`文件解析失败: ${error.message}`);
+                    }
+                },
+                async parseTXT(file) {
+                    const text = await file.text();
+                    const lines = text.split('
+').filter(line => line.trim());
+                    const questions = [];
+                    let currentQuestion = null;
+                    let questionType = 'single';
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (!line) continue;
+                        // 检测题型标题
+                        if (line.includes('单选题')) {
+                            questionType = 'single';
+                            continue;
+                        } else if (line.includes('多选题')) {
+                            questionType = 'multiple';
+                            continue;
+                        } else if (line.includes('判断题')) {
+                            questionType = 'judge';
+                            continue;
+                        } else if (line.includes('填空题')) {
+                            questionType = 'fill';
+                            continue;
+                        } else if (line.includes('简答题')) {
+                            questionType = 'essay';
+                            continue;
+                        }
+                        // 检测题目编号
+                        const questionMatch = line.match(/^\d+\.\s*(.+)/);
+                        if (questionMatch) {
+                            if (currentQuestion) {
+                                questions.push(currentQuestion);
+                            }
+                            currentQuestion = {
+                                id: `txt_${Date.now()}_${questions.length}`,
+                                type: questionType,
+                                content: questionMatch[1].trim(),
+                                options: [],
+                                answer: null,
+                                analysis: ''
+                            };
+                            continue;
+                        }
+                        // 检测选项
+                        const optionMatch = line.match(/^([A-Z])\.\s*(.+)/);
+                        if (optionMatch && currentQuestion) {
+                            currentQuestion.options.push(optionMatch[2].trim());
+                            continue;
+                        }
+                        // 检测答案
+                        const answerMatch = line.match(/答案：(.+)/);
+                        if (answerMatch && currentQuestion) {
+                            const answerText = answerMatch[1].trim();
+                            if (questionType === 'multiple') {
+                                currentQuestion.answer = answerText.split(',').map(a => a.trim().charCodeAt(0) - 65);
+                            } else if (questionType === 'single' || questionType === 'judge') {
+                                currentQuestion.answer = answerText.charCodeAt(0) - 65;
+                            } else {
+                                currentQuestion.answer = answerText;
+                            }
+                            continue;
+                        }
+                        // 检测解析
+                        const analysisMatch = line.match(/解析：(.+)/);
+                        if (analysisMatch && currentQuestion) {
+                            currentQuestion.analysis = analysisMatch[1].trim();
+                            continue;
+                        }
+                        // 如果是判断题，添加标准选项
+                        if (questionType === 'judge' && currentQuestion && currentQuestion.options.length === 0) {
+                            currentQuestion.options = ['正确', '错误'];
+                        }
+                    }
+                    if (currentQuestion) {
+                        questions.push(currentQuestion);
+                    }
+                    return questions;
+                },
+                async parseJSON(file) {
+                    const text = await file.text();
+                    return JSON.parse(text);
+                },
+                async parseExcel(file) {
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+                    return json.map((row, index) => {
+                        const question = {
+                            id: 'excel_' + Date.now() + '_' + index,
+                            type: row['题型'] || 'single',
+                            content: row['题干'] || row['题目'] || '',
+                            options: [],
+                            answer: null,
+                            analysis: row['解析'] || ''
+                        };
+                        // 处理选项
+                        for (let i = 0; i < 10; i++) {
+                            const option = row[`选项${String.fromCharCode(65 + i)}`] || row[`选项${i + 1}`];
+                            if (option) {
+                                question.options.push(option);
+                            }
+                        }
+                        // 处理答案
+                        const answer = row['答案'];
+                        if (typeof answer === 'string') {
+                            if (question.type === 'multiple') {
+                                question.answer = answer.split(',').map(a => a.trim().charCodeAt(0) - 65);
+                            } else {
+                                question.answer = answer.trim().charCodeAt(0) - 65;
+                            }
+                        } else {
+                            question.answer = answer;
+                        }
+                        return question;
+                    }).filter(q => q.content);
+                },
+                async parseDocx(file) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({ arrayBuffer });
+                    const text = result.value;
+                    // 将docx文本转换为类似TXT的格式，然后复用TXT解析逻辑
+                    const lines = text.split('
+').filter(line => line.trim());
+                    const formattedText = lines.join('
+');
+                    const blob = new Blob([formattedText], { type: 'text/plain' });
+                    return await this.parseTXT(blob);
+                },
+                // 批量操作相关方法
+                toggleSelectAll() {
+                    this.pendingQuestions.forEach(q => {
+                        q.selected = this.selectAllPending;
+                    });
+                },
+                applyBatchType() {
+                    if (this.batchType) {
+                        this.pendingQuestions.forEach(q => {
+                            if (q.selected) {
+                                q.selectedType = this.batchType;
+                            }
+                        });
+                        this.batchType = '';
+                    }
+                },
+                confirmImport() {
+                    const selectedQuestions = this.pendingQuestions.filter(q => q.selected);
+                    selectedQuestions.forEach(q => {
+                        const question = {
+                            ...q,
+                            type: q.selectedType,
+                            difficulty: q.difficulty || 2,
+                            tags: q.tags || []
+                        };
+                        delete question.selectedType;
+                        delete question.selected;
+                        this.questionBank.push(question);
+                    });
+                    this.showQuestionTypeDialog = false;
+                    this.pendingQuestions = [];
+                    this.saveUserData();
+                    alert(`成功导入 ${selectedQuestions.length} 道题目！`);
+                },
+                // 工具方法
+                shuffleArray(array) {
+                    const shuffled = [...array];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    return shuffled;
+                },
+                // 开始计时器
+                startTimer() {
+                    if (this.examTimer) {
+                        clearInterval(this.examTimer);
+                    }
+                    this.examTimer = setInterval(() => {
+                        if (this.remainingTime > 0) {
+                            this.remainingTime--;
+                        } else {
+                            this.submitExam();
+                        }
+                    }, 1000);
+                },
+                // 暂停考试
+                pauseExam() {
+                    if (this.examTimer) {
+                        clearInterval(this.examTimer);
+                        this.examTimer = null;
+                    }
+                },
+                // 提交当前答案
+                submitCurrentAnswer() {
+                    if (this.userAnswers[this.currentQuestionIndex] === undefined) {
+                        alert('请先选择答案！');
+                        return;
+                    }
+                    this.currentAnswerSubmitted = true;
+                    this.submittedAnswers.add(this.currentQuestionIndex);
+                    // 检查答案是否正确
+                    const isCorrect = this.isAnswerCorrect(this.currentQuestionIndex);
+                    // 如果是错题，添加到错题本
+                    if (!isCorrect) {
+                        this.addToMistakeBank(this.currentQuestion, this.userAnswers[this.currentQuestionIndex]);
+                    }
+                    // 自动显示答案
+                    this.showCurrentAnswer();
+                },
+                // 选择选项
+                selectOption(index) {
+                    if (this.currentAnswerSubmitted) return;
+                    if (this.currentQuestion.type === 'multiple') {
+                        // 多选题
+                        if (!this.userAnswers[this.currentQuestionIndex]) {
+                            this.userAnswers[this.currentQuestionIndex] = [];
+                        }
+                        const answers = this.userAnswers[this.currentQuestionIndex];
+                        const optionIndex = answers.indexOf(index);
+                        if (optionIndex > -1) {
+                            answers.splice(optionIndex, 1);
+                        } else {
+                            answers.push(index);
+                        }
+                        // 触发响应式更新
+                        this.userAnswers = { ...this.userAnswers };
+                    } else {
+                        // 单选题
+                        this.userAnswers[this.currentQuestionIndex] = index;
+                    }
+                },
+                // 保存简答题答案
+                saveEssayAnswer() {
+                    // 简答题答案已经通过 v-model 绑定，这里只是确保响应式更新
+                    this.userAnswers = { ...this.userAnswers };
+                },
+                // 显示当前答案
+                showCurrentAnswer() {
+                    this.currentAnswerShown = true;
+                },
+                // 隐藏当前答案
+                hideCurrentAnswer() {
+                    this.currentAnswerShown = false;
+                },
+                // 获取选项样式类
+                getOptionClass(index) {
+                    if (!this.currentAnswerSubmitted && this.userAnswers[this.currentQuestionIndex] === undefined) {
+                        return '';
+                    }
+                    const userAnswer = this.userAnswers[this.currentQuestionIndex];
+                    const correctAnswer = this.currentQuestion.answer;
+                    if (this.currentQuestion.type === 'multiple') {
+                        const isSelected = Array.isArray(userAnswer) ? userAnswer.includes(index) : userAnswer === index;
+                        const isCorrect = Array.isArray(correctAnswer) ? correctAnswer.includes(index) : correctAnswer === index;
+                        if (this.currentAnswerSubmitted) {
+                            if (isCorrect) return 'correct';
+                            if (isSelected && !isCorrect) return 'wrong';
+                        } else {
+                            if (isSelected) return 'selected';
+                        }
+                        return '';
+                    } else {
+                        if (this.currentAnswerSubmitted) {
+                            if (index === correctAnswer) return 'correct';
+                            if (index === userAnswer) return 'wrong';
+                        } else {
+                            if (index === userAnswer) return 'selected';
+                        }
+                        return '';
+                    }
+                },
+                // 检查答案是否正确
+                isAnswerCorrect(questionIndex) {
+                    const question = this.currentQuestions[questionIndex];
+                    const userAnswer = this.userAnswers[questionIndex];
+                    if (userAnswer === undefined) return false;
+                    if (question.type === 'multiple') {
+                        return this.arraysEqual(userAnswer.sort(), question.answer.sort());
+                    } else if (question.type === 'essay' || question.type === 'fill') {
+                        return userAnswer.trim().length > 0;
+                    } else {
+                        return userAnswer === question.answer;
+                    }
+                },
+                // 数组比较
+                arraysEqual(a, b) {
+                    return a.length === b.length && a.every((val, i) => val === b[i]);
+                },
+                // 格式化答案显示
+                formatAnswer(answer) {
+                    if (Array.isArray(answer)) {
+                        return answer.map(i => String.fromCharCode(65 + i)).join(', ');
+                    } else if (typeof answer === 'number') {
+                        return String.fromCharCode(65 + answer);
+                    } else {
+                        return answer;
+                    }
+                },
+                // 上一题
+                previousQuestion() {
+                    if (this.currentQuestionIndex > 0) {
+                        this.currentQuestionIndex--;
+                        this.currentAnswerShown = false;
+                        this.currentAnswerSubmitted = this.submittedAnswers.has(this.currentQuestionIndex);
+                    }
+                },
+                // 下一题
+                nextQuestion() {
+                    if (this.currentQuestionIndex < this.currentQuestions.length - 1) {
+                        this.currentQuestionIndex++;
+                        this.currentAnswerShown = false;
+                        this.currentAnswerSubmitted = this.submittedAnswers.has(this.currentQuestionIndex);
+                    }
+                },
+                // 跳转到指定题目
+                jumpToQuestion(index) {
+                    this.currentQuestionIndex = index;
+                    this.currentAnswerShown = false;
+                    this.currentAnswerSubmitted = this.submittedAnswers.has(index);
+                },
+                // 标记题目
+                markQuestion() {
+                    if (this.markedQuestions.has(this.currentQuestionIndex)) {
+                        this.markedQuestions.delete(this.currentQuestionIndex);
+                    } else {
+                        this.markedQuestions.add(this.currentQuestionIndex);
+                    }
+                },
+                // 获取答题卡样式
+                getAnswerCardClass(index) {
+                    const baseClass = 'border cursor-pointer';
+                    if (this.submittedAnswers.has(index)) {
+                        if (this.isAnswerCorrect(index)) {
+                            return `${baseClass} bg-green-100 text-green-800 border-green-300`;
+                        } else {
+                            return `${baseClass} bg-red-100 text-red-800 border-red-300`;
+                        }
+                    } else if (this.userAnswers[index] !== undefined) {
+                        return `${baseClass} bg-blue-100 text-blue-800 border-blue-300`;
+                    } else if (this.markedQuestions.has(index)) {
+                        return `${baseClass} bg-yellow-100 text-yellow-800 border-yellow-300`;
+                    } else {
+                        return `${baseClass} bg-gray-100 text-gray-600 border-gray-300`;
+                    }
+                },
+                // 交卷
+                submitExam() {
+                    // 确保计时器停止
+                    if (this.examTimer) {
+                        clearInterval(this.examTimer);
+                        this.examTimer = null;
+                    }
+                    // 计算得分
+                    const totalQuestions = this.currentQuestions.length;
+                    let correctCount = 0;
+                    this.currentQuestions.forEach((question, index) => {
+                        if (this.isAnswerCorrect(index)) {
+                            correctCount++;
+                        } else if (!this.submittedAnswers.has(index) && this.userAnswers[index] !== undefined) {
+                            // 未手动提交但已作答的错题
+                            this.addToMistakeBank(question, this.userAnswers[index]);
+                        }
+                    });
+                    const score = Math.round((correctCount / totalQuestions) * 100);
+                    // 记录考试结果
+                    this.studyStats.examRecords.push({
+                        date: new Date().toISOString(),
+                        score: score,
+                        correctCount: correctCount,
+                        totalQuestions: totalQuestions,
+                        duration: Math.round((Date.now() - this.examStartTime) / 1000)
+                    });
+                    this.studyStats.totalQuestions += totalQuestions;
+                    this.studyStats.correctAnswers += correctCount;
+                    this.studyStats.totalStudyTime += Math.round((Date.now() - this.examStartTime) / 1000);
+                    this.saveUserData();
+                    // 显示结果
+                    alert(`考试结束！
+总题数：${totalQuestions}
+正确数：${correctCount}
+得分：${score}分`);
+                },
+                // 添加到错题本
+                addToMistakeBank(question, wrongAnswer) {
+                    const existingMistake = this.mistakeBank.find(m => m.id === question.id);
+                    if (!existingMistake) {
+                        this.mistakeBank.push({
+                            ...question,
+                            wrongAnswer: wrongAnswer,
+                            mistakeTime: new Date().toISOString(),
+                            isImportant: false,
+                            notes: ''
+                        });
+                    }
+                },
+                // 重置配置
+                resetConfig() {
+                    this.examConfig = {
+                        single: 0,
+                        multiple: 0,
+                        judge: 0,
+                        fill: 0,
+                        essay: 0,
+                        time: 60,
+                        rule: 'random',
+                        enableTimer: true,
+                        showAnswerImmediately: true
+                    };
+                },
+                // 获取题型文本
+                getQuestionTypeText(type) {
+                    const typeMap = {
+                        'single': '单选题',
+                        'multiple': '多选题',
+                        'judge': '判断题',
+                        'fill': '填空题',
+                        'essay': '简答题'
+                    };
+                    return typeMap[type] || '未知题型';
+                },
+                // 格式化日期
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('zh-CN');
+                },
+                // 分享功能
+                shareLink() {
+                    this.showQRCode = true;
+                    this.$nextTick(() => {
+                        this.generateQRCode();
+                    });
+                },
+                copyLink() {
+                    navigator.clipboard.writeText(this.currentUrl).then(() => {
+                        alert('链接已复制到剪贴板！');
+                    });
+                },
+                generateQRCode() {
+                    this.$nextTick(() => {
+                        const qrcodeElement = document.getElementById('qrcode');
+                        if (qrcodeElement) {
+                            // 清除之前的二维码
+                            qrcodeElement.innerHTML = '';
+                            // 生成新的二维码
+                            new QRCode(qrcodeElement, {
+                                text: this.currentUrl,
+                                width: 128,
+                                height: 128,
+                                colorDark: '#07c160',
+                                colorLight: '#ffffff',
+                                correctLevel: QRCode.CorrectLevel.H
+                            });
+                        }
+                    });
+                },
+                // 数据共享功能
+                exportData() {
+                    if (!this.currentUser) {
+                        alert('请先登录后再导出数据！');
+                        return;
+                    }
+                    const data = {
+                        questionBank: this.questionBank,
+                        mistakeBank: this.mistakeBank,
+                        studyStats: this.studyStats,
+                        exportTime: new Date().toISOString(),
+                        version: '1.0',
+                        userId: this.currentUser.id,
+                        username: this.currentUser.username
+                    };
+                    const dataStr = JSON.stringify(data, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `刷题数据_${this.currentUser.username}_${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                },
+                importData() {
+                    if (!this.currentUser) {
+                        alert('请先登录后再导入数据！');
+                        return;
+                    }
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                try {
+                                    const data = JSON.parse(e.target.result);
+                                    let importCount = 0;
+                                    if (data.questionBank && confirm(`是否导入 ${data.questionBank.length} 道题目？`)) {
+                                        // 避免重复题目
+                                        const existingIds = new Set(this.questionBank.map(q => q.id));
+                                        const newQuestions = data.questionBank.filter(q => !existingIds.has(q.id));
+                                        this.questionBank.push(...newQuestions);
+                                        importCount += newQuestions.length;
+                                    }
+                                    if (data.mistakeBank && confirm(`是否导入 ${data.mistakeBank.length} 道错题？`)) {
+                                        // 避免重复错题
+                                        const existingMistakeIds = new Set(this.mistakeBank.map(m => m.id));
+                                        const newMistakes = data.mistakeBank.filter(m => !existingMistakeIds.has(m.id));
+                                        this.mistakeBank.push(...newMistakes);
+                                        importCount += newMistakes.length;
+                                    }
+                                    if (data.studyStats && confirm('是否导入学习统计数据？')) {
+                                        // 合并学习统计
+                                        this.studyStats.totalQuestions += data.studyStats.totalQuestions || 0;
+                                        this.studyStats.correctAnswers += data.studyStats.correctAnswers || 0;
+                                        this.studyStats.totalStudyTime += data.studyStats.totalStudyTime || 0;
+                                        if (data.studyStats.examRecords) {
+                                            this.studyStats.examRecords.push(...data.studyStats.examRecords);
+                                        }
+                                    }
+                                    this.saveUserData();
+                                    alert(`数据导入成功！共导入 ${importCount} 条数据。`);
+                                } catch (error) {
+                                    alert('数据导入失败，请检查文件格式！');
+                                }
+                            };
+                            reader.readAsText(file);
+                        }
+                    };
+                    input.click();
+                },
+                // 错题练习
+                startMistakePractice() {
+                    if (this.mistakeBank.length === 0) {
+                        alert('错题本为空！');
+                        return;
+                    }
+                    this.examMode = 'practice';
+                    this.currentQuestions = this.shuffleArray([...this.mistakeBank]);
+                    this.currentMode = 'exam';
+                    this.currentQuestionIndex = 0;
+                    this.userAnswers = {};
+                    this.markedQuestions.clear();
+                    this.currentAnswerShown = false;
+                    this.currentAnswerSubmitted = false;
+                    this.submittedAnswers.clear();
+                    this.examStartTime = Date.now();
+                    this.remainingTime = 0;
+                },
+                // 清空错题
+                clearMistakes() {
+                    if (confirm('确定要清空所有错题吗？')) {
+                        this.mistakeBank = [];
+                        this.saveUserData();
+                    }
+                },
+                // 删除错题
+                removeMistake(mistake) {
+                    const index = this.mistakeBank.findIndex(m => m.id === mistake.id);
+                    if (index > -1) {
+                        this.mistakeBank.splice(index, 1);
+                        this.saveUserData();
+                    }
+                },
+                // 切换重点标记
+                toggleImportant(mistake) {
+                    mistake.isImportant = !mistake.isImportant;
+                    this.saveUserData();
+                },
+                // 重新练习错题
+                reviewMistake(mistake) {
+                    this.examMode = 'practice';
+                    this.currentQuestions = [mistake];
+                    this.currentMode = 'exam';
+                    this.currentQuestionIndex = 0;
+                    this.userAnswers = {};
+                    this.markedQuestions.clear();
+                    this.currentAnswerShown = false;
+                    this.currentAnswerSubmitted = false;
+                    this.submittedAnswers.clear();
+                    this.examStartTime = Date.now();
+                    this.remainingTime = 0;
+                },
+                // 清空题库
+                clearQuestionBank() {
+                    if (confirm('确定要清空整个题库吗？此操作不可恢复！')) {
+                        this.questionBank = [];
+                        this.saveUserData();
+                        alert('题库已清空！');
+                    }
+                },
+                // 删除题目
+                deleteQuestion(question) {
+                    if (confirm('确定要删除这道题目吗？')) {
+                        const index = this.questionBank.findIndex(q => q.id === question.id);
+                        if (index > -1) {
+                            this.questionBank.splice(index, 1);
+                            this.saveUserData();
+                        }
+                    }
+                },
+                // 编辑题目
+                editQuestion(question) {
+                    this.editingQuestion = JSON.parse(JSON.stringify(question));
+                    // 确保答案格式正确
+                    if (this.editingQuestion.type === 'multiple' && !Array.isArray(this.editingQuestion.answer)) {
+                        this.editingQuestion.answer = [];
+                    }
+                    if (this.editingQuestion.type === 'judge' && (!this.editingQuestion.options || this.editingQuestion.options.length === 0)) {
+                        this.editingQuestion.options = ['正确', '错误'];
+                    }
+                    this.showEditDialog = true;
+                },
+                // 关闭编辑对话框
+                closeEditDialog() {
+                    this.showEditDialog = false;
+                    this.editingQuestion = null;
+                },
+                // 保存编辑的题目
+                saveEditQuestion() {
+                    // 验证数据
+                    if (!this.editingQuestion.content.trim()) {
+                        alert('请输入题目内容！');
+                        return;
+                    }
+                    // 验证选择题必须有正确答案
+                    if (this.editingQuestion.type === 'single' || this.editingQuestion.type === 'judge') {
+                        if (this.editingQuestion.answer === null || this.editingQuestion.answer === undefined) {
+                            alert('请选择正确答案！');
+                            return;
+                        }
+                    } else if (this.editingQuestion.type === 'multiple') {
+                        if (!Array.isArray(this.editingQuestion.answer) || this.editingQuestion.answer.length === 0) {
+                            alert('请至少选择一个正确答案！');
+                            return;
+                        }
+                    } else {
+                        if (!this.editingQuestion.answer || !this.editingQuestion.answer.trim()) {
+                            alert('请输入正确答案！');
+                            return;
+                        }
+                    }
+                    // 处理标签
+                    if (typeof this.editingQuestion.tags === 'string') {
+                        this.editingQuestion.tags = this.editingQuestion.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    }
+                    // 更新题目
+                    const index = this.questionBank.findIndex(q => q.id === this.editingQuestion.id);
+                    if (index !== -1) {
+                        this.questionBank[index] = JSON.parse(JSON.stringify(this.editingQuestion));
+                        this.saveUserData();
+                        alert('题目保存成功！');
+                        this.closeEditDialog();
+                    }
+                },
+                // 添加选项
+                addOption() {
+                    if (this.editingQuestion.options.length < 10) {
+                        this.editingQuestion.options.push('');
+                    }
+                },
+                // 删除选项
+                removeOption(index) {
+                    if (this.editingQuestion.options.length > 2) {
+                        this.editingQuestion.options.splice(index, 1);
+                        // 重新调整答案
+                        if (this.editingQuestion.type === 'single' || this.editingQuestion.type === 'judge') {
+                            if (this.editingQuestion.answer >= this.editingQuestion.options.length) {
+                                this.editingQuestion.answer = 0;
+                            }
+                        } else if (this.editingQuestion.type === 'multiple') {
+                            this.editingQuestion.answer = this.editingQuestion.answer.filter(a => a < this.editingQuestion.options.length);
+                        }
+                    }
+                }
+            },
+            mounted() {
+                // 检查是否有已登录用户
+                const savedUser = localStorage.getItem('currentUser');
+                if (savedUser) {
+                    try {
+                        this.currentUser = JSON.parse(savedUser);
+                        this.loadUserData();
+                    } catch (e) {
+                        console.error('用户会话加载失败:', e);
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
