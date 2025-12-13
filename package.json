@@ -1,0 +1,33 @@
+{
+  "name": "smart-exam-system",
+  "version": "2.0.0",
+  "description": "智能刷题系统 - 支持多用户题库同步的在线学习平台",
+  "main": "production-server.js",
+  "scripts": {
+    "start": "node production-server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "exam",
+    "quiz",
+    "learning",
+    "education",
+    "vue",
+    "javascript",
+    "nodejs"
+  ],
+  "author": "Smart Exam System Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smart-exam-system/smart-exam-system.git"
+  },
+  "homepage": "http://localhost",
+  "bugs": {
+    "url": "https://github.com/smart-exam-system/smart-exam-system/issues"
+  }
+}

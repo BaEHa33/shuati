@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  smart-exam-system:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: smart-exam-system:latest
+    container_name: smart-exam-system
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./logs:/app/logs:rw
+      - ./public:/app/public:ro
+      - ./config:/app/config:ro
+    environment:
+      - NODE_ENV=production
+      - PORT=80
+      - HOST=0.0.0.0
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - smart-exam-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+    depends_on:
+      - smart-exam-system
+    networks:
+      - smart-exam-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.monitor
+    image: smart-exam-monitor:latest
+    container_name: smart-exam-monitor
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - smart-exam-system
+    networks:
+      - smart-exam-network
+    environment:
+      - MONITOR_TARGET=smart-exam-system
+      - CHECK_INTERVAL=300
+      - ALERT_EMAIL=admin@example.com
+
+networks:
+  smart-exam-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+volumes:
+  logs:
+    driver: local
+  public:
+    driver: local
+  config:
+    driver: local
