@@ -1,0 +1,33 @@
+FROM alpine:3.18
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装必要的工具
+RUN apk add --no-cache \
+    bash \
+    curl \
+    jq \
+    docker-cli \
+    tini \
+    && rm -rf /var/cache/apk/*
+
+# 创建日志目录
+RUN mkdir -p /app/logs
+
+# 复制监控脚本
+COPY monitor.sh /app/
+RUN chmod +x /app/monitor.sh
+
+# 设置环境变量默认值
+ENV MONITOR_TARGET=smart-exam-system
+ENV CHECK_INTERVAL=300
+ENV ALERT_EMAIL=admin@example.com
+ENV HEALTH_CHECK_URL=http://smart-exam-system:80
+ENV MAX_RETRIES=3
+
+# 使用tini作为init进程
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# 启动监控
+CMD ["/app/monitor.sh"]
