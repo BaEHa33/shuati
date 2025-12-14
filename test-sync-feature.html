@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试同步功能</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- QRCode.js -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <!-- 跨设备同步系统 -->
+    <script src="cross-device-sync.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-supported {
+            background: #10b981;
+        }
+        
+        .status-unsupported {
+            background: #ef4444;
+        }
+        
+        .log-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 2px 0;
+        }
+        
+        .log-success {
+            color: #059669;
+        }
+        
+        .log-error {
+            color: #dc2626;
+        }
+        
+        .log-info {
+            color: #2563eb;
+        }
+        
+        .log-warning {
+            color: #d97706;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .feature-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .feature-description {
+            font-size: 14px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">跨设备同步功能测试</h1>
+            <p class="text-gray-600">测试智能刷题系统的跨设备同步功能</p>
+        </div>
+
+        <!-- 同步状态概览 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fa fa-tachometer mr-2"></i>同步状态概览
+            </h2>
+            <div id="syncStatus" class="space-y-3">
+                <p>加载中...</p>
+            </div>
+        </div>
+
+        <!-- 主要功能按钮 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fa fa-cogs mr-2"></i>同步功能
+            </h2>
+            <div class="flex flex-wrap gap-3 mb-6">
+                <button id="exportBtn" class="btn btn-primary">
+                    <i class="fa fa-download mr-2"></i>导出同步数据
+                </button>
+                <button id="importBtn" class="btn btn-secondary">
+                    <i class="fa fa-upload mr-2"></i>导入同步数据
+                </button>
+                <button id="qrcodeBtn" class="btn btn-success">
+                    <i class="fa fa-qrcode mr-2"></i>显示同步二维码
+                </button>
+                <button id="clearLogBtn" class="btn btn-danger">
+                    <i class="fa fa-trash mr-2"></i>清除日志
+                </button>
+            </div>
+
+            <!-- 隐藏的文件输入 -->
+            <input type="file" id="fileInput" accept=".json" style="display: none;">
+        </div>
+
+        <!-- 功能特性 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fa fa-star mr-2"></i>同步功能特性
+            </h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon text-blue-500">
+                        <i class="fa fa-exchange"></i>
+                    </div>
+                    <div class="feature-title">文件导入导出</div>
+                    <div class="feature-description">通过JSON文件在不同设备间同步数据</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon text-green-500">
+                        <i class="fa fa-qrcode"></i>
+                    </div>
+                    <div class="feature-title">二维码同步</div>
+                    <div class="feature-description">扫描二维码快速建立设备间连接</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon text-purple-500">
+                        <i class="fa fa-database"></i>
+                    </div>
+                    <div class="feature-title">数据去重</div>
+                    <div class="feature-description">自动去除重复题目和记录</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon text-orange-500">
+                        <i class="fa fa-history"></i>
+                    </div>
+                    <div class="feature-title">同步历史</div>
+                    <div class="feature-description">记录并显示同步操作历史</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 测试数据生成 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fa fa-magic mr-2"></i>测试数据生成
+            </h2>
+            <p class="text-gray-600 mb-4">生成测试数据用于同步功能测试</p>
+            <button id="generateTestDataBtn" class="btn btn-primary">
+                <i class="fa fa-plus-circle mr-2"></i>生成测试题库数据
+            </button>
+        </div>
+
+        <!-- 系统日志 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fa fa-terminal mr-2"></i>系统日志
+            </h2>
+            <div id="logContainer" class="log-container">
+                <div class="log-entry log-info">系统启动中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局日志函数
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // 限制日志条目数量
+            const entries = logContainer.querySelectorAll('.log-entry');
+            if (entries.length > 100) {
+                entries[0].remove();
+            }
+        }
+
+        // 更新同步状态显示
+        async function updateSyncStatus() {
+            try {
+                if (!window.crossDeviceSync) {
+                    log('跨设备同步模块未加载', 'error');
+                    return;
+                }
+
+                const status = await window.crossDeviceSync.getSyncStatus();
+                const statusContainer = document.getElementById('syncStatus');
+                
+                let html = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="font-medium">设备ID:</p>
+                            <p class="text-sm text-gray-600 break-all">${status.deviceId}</p>
+                        </div>
+                        <div>
+                            <p class="font-medium">最后同步时间:</p>
+                            <p class="text-sm text-gray-600">${status.lastSyncTime ? new Date(status.lastSyncTime).toLocaleString() : '从未同步'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <p class="font-medium mb-2">支持的同步方法:</p>
+                        <div class="space-y-2">
+                `;
+                
+                const methods = {
+                    'fileAPI': '文件导入导出',
+                    'localStorage': '本地存储',
+                    'camera': '摄像头扫码'
+                };
+                
+                for (const [method, description] of Object.entries(methods)) {
+                    const isSupported = status.supportedMethods[method];
+                    html += `
+                        <div class="flex items-center">
+                            <span class="status-indicator ${isSupported ? 'status-supported' : 'status-unsupported'}"></span>
+                            <span class="text-sm">${description}: ${isSupported ? '✅ 支持' : '❌ 不支持'}</span>
+                        </div>
+                    `;
+                }
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+                
+                if (status.syncHistory && status.syncHistory.length > 0) {
+                    html += `
+                        <div class="mt-4">
+                            <p class="font-medium mb-2">最近同步记录:</p>
+                            <div class="space-y-1">
+                    `;
+                    
+                    status.syncHistory.slice(0, 3).forEach(record => {
+                        const date = new Date(record.timestamp).toLocaleString();
+                        const type = record.type === 'export' ? '导出' : '导入';
+                        const statusText = record.success ? '成功' : '失败';
+                        const statusClass = record.success ? 'text-green-600' : 'text-red-600';
+                        
+                        html += `
+                            <div class="text-sm">
+                                ${date} - ${type} ${statusText}
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                statusContainer.innerHTML = html;
+                
+            } catch (error) {
+                log(`更新同步状态失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 生成测试数据
+        function generateTestData() {
+            log('开始生成测试数据...', 'info');
+            
+            // 创建模拟的应用数据
+            window.app = window.app || {};
+            
+            // 生成公共题库
+            const publicQuestions = [];
+            for (let i = 1; i <= 10; i++) {
+                publicQuestions.push({
+                    id: `test_pub_${i}_${Date.now()}`,
+                    content: `公共题目 ${i}: HTML5中用于定义${i % 2 === 0 ? '文档主要内容' : '导航链接'}的标签是？`,
+                    type: 'single',
+                    options: ['<header>', '<main>', '<nav>', '<section>'],
+                    answer: i % 2 === 0 ? '1' : '2',
+                    analysis: `这是公共题目 ${i} 的详细解析。`,
+                    source: 'test-data',
+                    createTime: new Date().toISOString(),
+                    difficulty: (i % 3) + 1,
+                    category: 'HTML5',
+                    tags: ['HTML', '语义化标签', '测试数据']
+                });
+            }
+            
+            // 生成个人题库
+            const personalQuestions = [];
+            for (let i = 1; i <= 5; i++) {
+                personalQuestions.push({
+                    id: `test_per_${i}_${Date.now()}`,
+                    content: `个人题目 ${i}: CSS中${i % 2 === 0 ? 'flex' : 'grid'}布局的主要特点是？`,
+                    type: i % 3 === 0 ? 'multiple' : 'single',
+                    options: ['一维布局', '二维布局', '响应式', '固定布局'],
+                    answer: i % 2 === 0 ? '1,2,3' : '0',
+                    analysis: `这是个人题目 ${i} 的详细解析。`,
+                    source: 'test-data',
+                    createTime: new Date().toISOString(),
+                    difficulty: (i % 3) + 1,
+                    category: 'CSS',
+                    tags: ['CSS', '布局', '测试数据']
+                });
+            }
+            
+            // 生成错题本
+            const mistakeBank = [];
+            for (let i = 1; i <= 3; i++) {
+                mistakeBank.push({
+                    id: `test_mistake_${i}_${Date.now()}`,
+                    questionId: `test_pub_${i}_${Date.now()}`,
+                    content: `错题 ${i}: JavaScript中${i % 2 === 0 ? '数组' : '对象'}的主要特点是？`,
+                    userAnswer: '0',
+                    correctAnswer: '1',
+                    wrongCount: 1,
+                    lastWrongTime: new Date().toISOString(),
+                    tags: ['JavaScript', '测试数据']
+                });
+            }
+            
+            // 生成学习统计
+            const studyStats = {
+                totalQuestions: 150,
+                correctAnswers: 120,
+                totalStudyTime: 3600,
+                examRecords: [
+                    {
+                        id: `test_exam_1_${Date.now()}`,
+                        date: new Date().toISOString(),
+                        totalQuestions: 50,
+                        correctAnswers: 42,
+                        score: 84,
+                        duration: 1800
+                    }
+                ]
+            };
+            
+            // 设置应用数据
+            window.app.publicQuestionBank = publicQuestions;
+            window.app.personalQuestionBank = personalQuestions;
+            window.app.mistakeBank = mistakeBank;
+            window.app.studyStats = studyStats;
+            window.app.currentUser = { id: 'test_user', username: '测试用户' };
+            
+            log(`测试数据生成完成: 公共题目 ${publicQuestions.length} 道, 个人题目 ${personalQuestions.length} 道, 错题记录 ${mistakeBank.length} 条`, 'success');
+            
+            // 更新状态显示
+            setTimeout(updateSyncStatus, 100);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            log('页面加载完成，初始化同步系统...', 'info');
+            
+            // 等待同步模块初始化
+            setTimeout(async () => {
+                if (window.crossDeviceSync) {
+                    log('跨设备同步模块加载成功', 'success');
+                    
+                    // 初始化同步系统
+                    const initResult = await window.crossDeviceSync.init();
+                    if (initResult) {
+                        log('同步系统初始化成功', 'success');
+                    } else {
+                        log('同步系统初始化失败', 'error');
+                    }
+                    
+                    // 更新状态显示
+                    await updateSyncStatus();
+                    
+                } else {
+                    log('跨设备同步模块加载失败', 'error');
+                }
+            }, 500);
+            
+            // 绑定按钮事件
+            document.getElementById('exportBtn').addEventListener('click', async () => {
+                try {
+                    log('开始导出同步数据...', 'info');
+                    
+                    if (!window.app) {
+                        log('未找到应用数据，请先生成测试数据', 'warning');
+                        alert('请先生成测试数据！');
+                        return;
+                    }
+                    
+                    if (window.crossDeviceSync) {
+                        await window.crossDeviceSync.exportSyncData();
+                        log('数据导出成功', 'success');
+                    } else {
+                        log('同步模块未加载', 'error');
+                    }
+                    
+                } catch (error) {
+                    log(`导出失败: ${error.message}`, 'error');
+                }
+            });
+            
+            document.getElementById('importBtn').addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+            
+            document.getElementById('fileInput').addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    log(`开始导入文件: ${file.name}`, 'info');
+                    
+                    try {
+                        if (window.crossDeviceSync) {
+                            const result = await window.crossDeviceSync.importSyncData(file);
+                            log(`导入成功: 公共题目 ${result.importStats.publicQuestions} 道, 个人题目 ${result.importStats.personalQuestions} 道, 错题记录 ${result.importStats.mistakes} 条`, 'success');
+                            
+                            // 更新状态显示
+                            setTimeout(updateSyncStatus, 100);
+                            
+                        } else {
+                            log('同步模块未加载', 'error');
+                        }
+                        
+                    } catch (error) {
+                        log(`导入失败: ${error.message}`, 'error');
+                    }
+                }
+            });
+            
+            document.getElementById('qrcodeBtn').addEventListener('click', () => {
+                if (window.crossDeviceSync) {
+                    log('显示同步二维码...', 'info');
+                    window.crossDeviceSync.showQRCodeDialog();
+                } else {
+                    log('同步模块未加载', 'error');
+                }
+            });
+            
+            document.getElementById('clearLogBtn').addEventListener('click', () => {
+                document.getElementById('logContainer').innerHTML = '';
+                log('日志已清除', 'info');
+            });
+            
+            document.getElementById('generateTestDataBtn').addEventListener('click', generateTestData);
+        });
+    </script>
+</body>
+</html>

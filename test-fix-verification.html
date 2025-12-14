@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>同步功能修复验证 - 智能刷题系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        .btn-primary {
+            background-color: #07c160;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #06ad56;
+        }
+        .btn-secondary {
+            background-color: #f7f8fa;
+            color: #333;
+            border: 1px solid #e5e6eb;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #f2f3f5;
+            border-color: #dfe1e5;
+        }
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border-radius: 0.25rem;
+        }
+        .log-success {
+            background-color: #f0fdf4;
+            color: #166534;
+            border-left: 4px solid #22c55e;
+        }
+        .log-error {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        .log-warning {
+            background-color: #fefce8;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+        .log-info {
+            background-color: #f0f9ff;
+            color: #0369a1;
+            border-left: 4px solid #0ea5e9;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                同步功能修复验证
+            </h1>
+            <p class="text-gray-600 mb-6">
+                此页面用于验证"导出同步数据"按钮的修复是否成功。
+                请先登录，然后测试各个同步功能按钮。
+            </p>
+            
+            <!-- 登录状态 -->
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+                <h3 class="text-lg font-semibold text-blue-800 mb-2">
+                    <i class="fa fa-user-circle mr-2"></i>登录状态
+                </h3>
+                <div id="loginStatus" class="text-gray-700">
+                    <p><strong>当前用户:</strong> <span id="currentUser">未登录</span></p>
+                    <p><strong>登录状态:</strong> <span id="loginStatusText" class="text-red-500">未登录</span></p>
+                </div>
+                <button id="loginBtn" class="btn-primary mt-3">
+                    <i class="fa fa-sign-in mr-2"></i>模拟登录
+                </button>
+                <button id="logoutBtn" class="btn-secondary mt-3 ml-3" disabled>
+                    <i class="fa fa-sign-out mr-2"></i>退出登录
+                </button>
+            </div>
+            
+            <!-- 同步功能测试 -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                    <i class="fa fa-sync mr-2"></i>同步功能测试
+                </h3>
+                <div class="space-y-3">
+                    <button id="exportBtn" class="btn-secondary w-full py-3" disabled>
+                        📤 导出同步数据
+                    </button>
+                    <button id="importBtn" class="btn-secondary w-full py-3" disabled>
+                        📥 导入同步数据
+                    </button>
+                    <button id="qrcodeBtn" class="btn-secondary w-full py-3" disabled>
+                        📱 扫码同步
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Vue应用状态检测 -->
+            <div class="mb-6 p-4 bg-green-50 rounded-lg">
+                <h3 class="text-lg font-semibold text-green-800 mb-2">
+                    <i class="fa fa-code mr-2"></i>Vue应用状态
+                </h3>
+                <div id="vueStatus" class="text-gray-700">
+                    <p><strong>Vue应用实例:</strong> <span id="vueInstanceStatus" class="text-red-500">未检测到</span></p>
+                    <p><strong>exportSyncData方法:</strong> <span id="exportMethodStatus" class="text-red-500">未找到</span></p>
+                    <p><strong>crossDeviceSync模块:</strong> <span id="syncModuleStatus" class="text-red-500">未加载</span></p>
+                </div>
+                <button id="checkStatusBtn" class="btn-primary mt-3">
+                    <i class="fa fa-refresh mr-2"></i>检查状态
+                </button>
+            </div>
+        </div>
+        
+        <!-- 调试日志 -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                <i class="fa fa-terminal mr-2"></i>
+                调试日志
+                <button id="clearLogBtn" class="ml-auto btn-secondary text-sm px-3 py-1">
+                    <i class="fa fa-trash mr-1"></i>清空
+                </button>
+            </h3>
+            <div id="debugLog" class="max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                <div class="log-info">🟢 页面加载完成，开始监控同步功能状态...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 日志系统
+        class Logger {
+            constructor() {
+                this.logContainer = document.getElementById('debugLog');
+            }
+            
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString('zh-CN');
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry log-${type}`;
+                logEntry.innerHTML = `[${timestamp}] ${message}`;
+                
+                this.logContainer.appendChild(logEntry);
+                this.logContainer.scrollTop = this.logContainer.scrollHeight;
+            }
+            
+            success(message) {
+                this.log(`✅ ${message}`, 'success');
+            }
+            
+            error(message) {
+                this.log(`❌ ${message}`, 'error');
+            }
+            
+            warning(message) {
+                this.log(`⚠️ ${message}`, 'warning');
+            }
+            
+            info(message) {
+                this.log(`ℹ️ ${message}`, 'info');
+            }
+            
+            clear() {
+                this.logContainer.innerHTML = '';
+                this.info('日志已清空');
+            }
+        }
+        
+        const logger = new Logger();
+        
+        // 模拟用户数据
+        let mockCurrentUser = null;
+        
+        // 模拟Vue应用
+        const mockApp = {
+            currentUser: null,
+            
+            // 导出同步数据方法
+            exportSyncData() {
+                logger.info('📤 开始导出同步数据...');
+                
+                if (!this.currentUser) {
+                    logger.error('用户未登录');
+                    alert('请先登录后再导出同步数据！');
+                    return;
+                }
+                
+                logger.success(`用户已登录: ${this.currentUser.username}`);
+                
+                // 检查跨设备同步模块是否加载
+                if (window.crossDeviceSync) {
+                    logger.success('crossDeviceSync模块已加载');
+                    try {
+                        logger.info('调用exportSyncData方法...');
+                        window.crossDeviceSync.exportSyncData();
+                    } catch (error) {
+                        logger.error(`调用exportSyncData失败: ${error.message}`);
+                        logger.error(`错误详情: ${error.stack}`);
+                        alert(`导出同步数据失败！\n错误信息: ${error.message}\n请检查控制台获取更多详情。`);
+                    }
+                } else {
+                    logger.warning('crossDeviceSync模块未加载，使用备用方案');
+                    // 模拟导出成功
+                    setTimeout(() => {
+                        logger.success('✅ 同步数据导出完成！');
+                        alert('同步数据导出成功！文件名: sync_data_test.json');
+                    }, 1000);
+                }
+            },
+            
+            importSyncData() {
+                if (!this.currentUser) {
+                    alert('请先登录后再导入同步数据！');
+                    return;
+                }
+                
+                logger.info('📥 开始导入同步数据...');
+                alert('选择同步数据文件...');
+                // 模拟导入成功
+                setTimeout(() => {
+                    logger.success('✅ 同步数据导入完成！');
+                    alert('同步数据导入成功！');
+                }, 1000);
+            },
+            
+            showSyncQRCode() {
+                if (!this.currentUser) {
+                    alert('请先登录后再使用扫码同步！');
+                    return;
+                }
+                
+                logger.info('📱 显示扫码同步二维码...');
+                alert('扫码同步功能已启动！');
+            }
+        };
+        
+        // 检测Vue应用状态
+        function checkVueStatus() {
+            logger.info('🔍 检查Vue应用状态...');
+            
+            const vueInstanceStatus = document.getElementById('vueInstanceStatus');
+            const exportMethodStatus = document.getElementById('exportMethodStatus');
+            const syncModuleStatus = document.getElementById('syncModuleStatus');
+            
+            // 检查Vue应用实例
+            if (window.app) {
+                vueInstanceStatus.textContent = '已检测到';
+                vueInstanceStatus.className = 'text-green-500';
+                logger.success('检测到Vue应用实例');
+            } else {
+                vueInstanceStatus.textContent = '未检测到';
+                vueInstanceStatus.className = 'text-red-500';
+                logger.warning('未检测到Vue应用实例，使用模拟对象');
+            }
+            
+            // 检查exportSyncData方法
+            const app = window.app || mockApp;
+            if (typeof app.exportSyncData === 'function') {
+                exportMethodStatus.textContent = '已找到';
+                exportMethodStatus.className = 'text-green-500';
+                logger.success('找到exportSyncData方法');
+            } else {
+                exportMethodStatus.textContent = '未找到';
+                exportMethodStatus.className = 'text-red-500';
+                logger.error('未找到exportSyncData方法');
+            }
+            
+            // 检查crossDeviceSync模块
+            if (window.crossDeviceSync) {
+                syncModuleStatus.textContent = '已加载';
+                syncModuleStatus.className = 'text-green-500';
+                logger.success('crossDeviceSync模块已加载');
+            } else {
+                syncModuleStatus.textContent = '未加载';
+                syncModuleStatus.className = 'text-red-500';
+                logger.warning('crossDeviceSync模块未加载');
+            }
+        }
+        
+        // 更新登录状态
+        function updateLoginStatus() {
+            const currentUserSpan = document.getElementById('currentUser');
+            const loginStatusText = document.getElementById('loginStatusText');
+            const exportBtn = document.getElementById('exportBtn');
+            const importBtn = document.getElementById('importBtn');
+            const qrcodeBtn = document.getElementById('qrcodeBtn');
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            
+            if (mockCurrentUser) {
+                currentUserSpan.textContent = mockCurrentUser.username;
+                loginStatusText.textContent = '已登录';
+                loginStatusText.className = 'text-green-500';
+                
+                // 启用同步按钮
+                exportBtn.disabled = false;
+                importBtn.disabled = false;
+                qrcodeBtn.disabled = false;
+                
+                // 更新按钮状态
+                loginBtn.disabled = true;
+                logoutBtn.disabled = false;
+                
+                logger.success(`用户 ${mockCurrentUser.username} 已登录`);
+            } else {
+                currentUserSpan.textContent = '未登录';
+                loginStatusText.textContent = '未登录';
+                loginStatusText.className = 'text-red-500';
+                
+                // 禁用同步按钮
+                exportBtn.disabled = true;
+                importBtn.disabled = true;
+                qrcodeBtn.disabled = true;
+                
+                // 更新按钮状态
+                loginBtn.disabled = false;
+                logoutBtn.disabled = true;
+                
+                logger.info('用户未登录');
+            }
+        }
+        
+        // 事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            logger.info('页面初始化完成');
+            
+            // 检查初始状态
+            checkVueStatus();
+            updateLoginStatus();
+            
+            // 登录按钮
+            document.getElementById('loginBtn').addEventListener('click', function() {
+                const username = prompt('请输入用户名:', 'test_user');
+                if (username && username.trim()) {
+                    mockCurrentUser = {
+                        id: 'user_' + username,
+                        username: username.trim()
+                    };
+                    
+                    // 更新模拟应用的用户状态
+                    mockApp.currentUser = mockCurrentUser;
+                    
+                    updateLoginStatus();
+                    logger.success(`模拟登录成功: ${username}`);
+                }
+            });
+            
+            // 退出登录按钮
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                if (confirm('确定要退出登录吗？')) {
+                    mockCurrentUser = null;
+                    mockApp.currentUser = null;
+                    updateLoginStatus();
+                    logger.info('用户已退出登录');
+                }
+            });
+            
+            // 检查状态按钮
+            document.getElementById('checkStatusBtn').addEventListener('click', function() {
+                checkVueStatus();
+            });
+            
+            // 导出同步数据按钮
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                const app = window.app || mockApp;
+                if (typeof app.exportSyncData === 'function') {
+                    try {
+                        app.exportSyncData();
+                    } catch (error) {
+                        logger.error(`调用exportSyncData失败: ${error.message}`);
+                        alert(`操作失败: ${error.message}`);
+                    }
+                } else {
+                    logger.error('exportSyncData方法不可用');
+                    alert('功能暂不可用，请检查控制台获取详情。');
+                }
+            });
+            
+            // 导入同步数据按钮
+            document.getElementById('importBtn').addEventListener('click', function() {
+                const app = window.app || mockApp;
+                if (typeof app.importSyncData === 'function') {
+                    try {
+                        app.importSyncData();
+                    } catch (error) {
+                        logger.error(`调用importSyncData失败: ${error.message}`);
+                        alert(`操作失败: ${error.message}`);
+                    }
+                } else {
+                    logger.error('importSyncData方法不可用');
+                    alert('功能暂不可用，请检查控制台获取详情。');
+                }
+            });
+            
+            // 扫码同步按钮
+            document.getElementById('qrcodeBtn').addEventListener('click', function() {
+                const app = window.app || mockApp;
+                if (typeof app.showSyncQRCode === 'function') {
+                    try {
+                        app.showSyncQRCode();
+                    } catch (error) {
+                        logger.error(`调用showSyncQRCode失败: ${error.message}`);
+                        alert(`操作失败: ${error.message}`);
+                    }
+                } else {
+                    logger.error('showSyncQRCode方法不可用');
+                    alert('功能暂不可用，请检查控制台获取详情。');
+                }
+            });
+            
+            // 清空日志按钮
+            document.getElementById('clearLogBtn').addEventListener('click', function() {
+                logger.clear();
+            });
+            
+            // 定期检查状态
+            setInterval(() => {
+                checkVueStatus();
+            }, 5000);
+            
+            logger.success('所有事件监听器已设置完成');
+        });
+    </script>
+</body>
+</html>

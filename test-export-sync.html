@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导出同步功能对比测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        success: '#22c55e',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        info: '#0ea5e9',
+                        light: '#f8fafc',
+                        dark: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .glass {
+                background: rgba(255, 255, 255, 0.25);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.18);
+            }
+            .btn {
+                @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+            }
+            .btn-primary {
+                @apply bg-primary text-white hover:bg-blue-600 active:bg-blue-700;
+            }
+            .btn-secondary {
+                @apply bg-secondary text-white hover:bg-slate-600 active:bg-slate-700;
+            }
+            .btn-success {
+                @apply bg-success text-white hover:bg-green-600 active:bg-green-700;
+            }
+            .btn-danger {
+                @apply bg-danger text-white hover:bg-red-600 active:bg-red-700;
+            }
+            .card {
+                @apply bg-white rounded-xl shadow-lg p-6 border border-gray-200;
+            }
+            .input {
+                @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+            }
+            .badge {
+                @apply px-2 py-1 text-xs font-medium rounded-full;
+            }
+            .badge-blue {
+                @apply bg-blue-100 text-blue-800;
+            }
+            .badge-green {
+                @apply bg-green-100 text-green-800;
+            }
+            .badge-red {
+                @apply bg-red-100 text-red-800;
+            }
+            .badge-yellow {
+                @apply bg-yellow-100 text-yellow-800;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">🔄 导出同步功能对比测试</h1>
+            <p class="text-gray-600">测试导出数据和同步数据的差异，确保两者都包含题目内容</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- 导出数据测试 -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-800">📤 导出数据测试</h2>
+                    <span class="badge badge-blue">文件导出</span>
+                </div>
+                <div class="space-y-4">
+                    <button id="exportDataBtn" class="btn btn-primary w-full">
+                        <i class="fa fa-download mr-2"></i>导出同步数据文件
+                    </button>
+                    <div id="exportStatus" class="p-4 bg-gray-50 rounded-lg text-sm font-mono hidden"></div>
+                </div>
+            </div>
+
+            <!-- 同步数据测试 -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-800">📱 同步数据测试</h2>
+                    <span class="badge badge-green">二维码同步</span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">同步类型</label>
+                        <select id="syncType" class="input">
+                            <option value="both">全部题目</option>
+                            <option value="public">仅公共题库</option>
+                            <option value="personal">仅个人题库</option>
+                        </select>
+                    </div>
+                    <button id="generateSyncDataBtn" class="btn btn-success w-full">
+                        <i class="fa fa-qrcode mr-2"></i>生成同步数据
+                    </button>
+                    <div id="syncStatus" class="p-4 bg-gray-50 rounded-lg text-sm font-mono hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据对比区 -->
+        <div class="mt-8 card">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">⚖️ 数据对比结果</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div id="exportResult" class="p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold text-gray-700 mb-2">📤 导出数据结果</h3>
+                    <div class="text-sm font-mono">等待测试...</div>
+                </div>
+                <div id="syncResult" class="p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold text-gray-700 mb-2">📱 同步数据结果</h3>
+                    <div class="text-sm font-mono">等待测试...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作日志 -->
+        <div class="mt-8 card">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-gray-800">📝 操作日志</h2>
+                <button id="clearLogBtn" class="btn btn-sm btn-danger">
+                    <i class="fa fa-trash mr-1"></i>清空
+                </button>
+            </div>
+            <div class="bg-gray-900 text-gray-300 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
+                <div id="logContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟智能刷题系统的数据和方法
+        class MockExamSystem {
+            constructor() {
+                this.publicQuestionBank = [];
+                this.personalQuestionBank = [];
+                this.mistakeBank = [];
+                this.studyStats = {
+                    totalQuestions: 0,
+                    correctAnswers: 0,
+                    studyTime: 0
+                };
+                this.loadData();
+            }
+
+            loadData() {
+                try {
+                    const publicData = localStorage.getItem('publicQuestionBank');
+                    const personalData = localStorage.getItem('personalQuestionBank');
+                    
+                    this.publicQuestionBank = publicData ? JSON.parse(publicData) : [];
+                    this.personalQuestionBank = personalData ? JSON.parse(personalData) : [];
+                    
+                    this.log('💾 数据加载完成');
+                    this.updateStats();
+                } catch (error) {
+                    this.log('❌ 数据加载失败:', error.message);
+                }
+            }
+
+            saveData() {
+                try {
+                    localStorage.setItem('publicQuestionBank', JSON.stringify(this.publicQuestionBank));
+                    localStorage.setItem('personalQuestionBank', JSON.stringify(this.personalQuestionBank));
+                    this.log('💾 数据保存完成');
+                } catch (error) {
+                    this.log('❌ 数据保存失败:', error.message);
+                }
+            }
+
+            getDeviceId() {
+                let deviceId = localStorage.getItem('deviceId');
+                if (!deviceId) {
+                    deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('deviceId', deviceId);
+                }
+                return deviceId;
+            }
+
+            // 模拟原始的导出同步数据方法
+            async exportSyncData() {
+                this.log('📤 开始导出同步数据文件...');
+                
+                // 生成丰富的演示题目
+                const richDemoPublicQuestions = [
+                    {
+                        id: 'export_pub_1_' + Date.now(),
+                        content: 'HTML5中用于定义文档主要内容的标签是：',
+                        type: 'single',
+                        options: ['<header>', '<main>', '<section>', '<article>'],
+                        answer: '1',
+                        analysis: '<main>标签定义文档的主要内容，一个文档中应该只有一个<main>元素。',
+                        source: 'export-demo',
+                        createTime: new Date().toISOString(),
+                        difficulty: 2,
+                        category: 'HTML5',
+                        tags: ['HTML', '语义化标签']
+                    },
+                    {
+                        id: 'export_pub_2_' + Date.now(),
+                        content: 'CSS中，哪个属性用于设置元素的外边距？',
+                        type: 'single',
+                        options: ['padding', 'border', 'margin', 'spacing'],
+                        answer: '2',
+                        analysis: 'margin属性用于设置元素的外边距，控制元素与其他元素之间的距离。',
+                        source: 'export-demo',
+                        createTime: new Date().toISOString(),
+                        difficulty: 1,
+                        category: 'CSS基础',
+                        tags: ['CSS', '盒模型']
+                    }
+                ];
+                
+                const richDemoPersonalQuestions = [
+                    {
+                        id: 'export_per_1_' + Date.now(),
+                        content: 'Vue组件的data选项必须是一个函数。',
+                        type: 'judge',
+                        answer: 'true',
+                        analysis: '在Vue组件中，data选项必须是一个函数，这样每个实例可以维护独立的数据副本，避免数据污染。',
+                        source: 'export-demo',
+                        createTime: new Date().toISOString(),
+                        difficulty: 2,
+                        category: 'Vue',
+                        tags: ['Vue', '组件', 'data选项']
+                    }
+                ];
+                
+                // 获取现有题目并添加演示题目
+                let publicQuestions = [...this.publicQuestionBank, ...richDemoPublicQuestions];
+                let personalQuestions = [...this.personalQuestionBank, ...richDemoPersonalQuestions];
+                
+                this.log(`📚 导出公共题目: ${publicQuestions.length} 道`);
+                this.log(`📝 导出个人题目: ${personalQuestions.length} 道`);
+                
+                const data = {
+                    deviceId: this.getDeviceId(),
+                    exportTime: new Date().toISOString(),
+                    syncCount: publicQuestions.length + personalQuestions.length,
+                    publicQuestionCount: publicQuestions.length,
+                    personalQuestionCount: personalQuestions.length,
+                    publicQuestions: publicQuestions,
+                    personalQuestions: personalQuestions,
+                    mistakeBank: this.mistakeBank,
+                    studyStats: this.studyStats,
+                    deviceInfo: {
+                        type: 'desktop',
+                        browser: navigator.userAgent,
+                        timestamp: Date.now()
+                    }
+                };
+                
+                this.log('🔍 导出数据验证:');
+                this.log('   - 公共题目数量:', data.publicQuestions.length);
+                this.log('   - 个人题目数量:', data.personalQuestions.length);
+                this.log('   - 总题目数量:', data.syncCount);
+                
+                const dataStr = JSON.stringify(data, null, 2);
+                this.log(`📏 导出数据大小: ${dataStr.length} 字符`);
+                
+                // 显示结果
+                const exportResult = document.getElementById('exportResult');
+                exportResult.innerHTML = `
+                    <h3 class="font-semibold text-gray-700 mb-2">📤 导出数据结果</h3>
+                    <div class="text-sm">
+                        <div class="mb-1"><span class="text-blue-600">✓</span> 设备ID: ${data.deviceId}</div>
+                        <div class="mb-1"><span class="text-blue-600">✓</span> 导出时间: ${new Date(data.exportTime).toLocaleString()}</div>
+                        <div class="mb-1"><span class="text-blue-600">✓</span> 公共题目: ${data.publicQuestions.length} 道</div>
+                        <div class="mb-1"><span class="text-blue-600">✓</span> 个人题目: ${data.personalQuestions.length} 道</div>
+                        <div class="mb-1"><span class="text-blue-600">✓</span> 总题目数: ${data.syncCount} 道</div>
+                        <div class="mb-1"><span class="text-blue-600">✓</span> 数据大小: ${dataStr.length} 字符</div>
+                    </div>
+                `;
+                
+                // 创建下载链接
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sync_data_${this.getDeviceId()}_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.log('✅ 同步数据文件导出完成');
+                
+                return data;
+            }
+
+            // 模拟二维码同步数据生成方法
+            generateSyncQRData(syncType = 'both') {
+                this.log(`📊 开始生成同步数据，类型: ${syncType}...`);
+                
+                // 生成丰富的演示题目
+                const richDemoPublicQuestions = [
+                    {
+                        id: 'rich_pub_1_' + Date.now(),
+                        content: 'HTML5中用于定义文档主要内容的标签是：',
+                        type: 'single',
+                        options: ['<header>', '<main>', '<section>', '<article>'],
+                        answer: '1',
+                        analysis: '<main>标签定义文档的主要内容，一个文档中应该只有一个<main>元素。',
+                        source: 'rich-demo',
+                        createTime: new Date().toISOString(),
+                        difficulty: 2,
+                        category: 'HTML5',
+                        tags: ['HTML', '语义化标签']
+                    },
+                    {
+                        id: 'rich_pub_2_' + Date.now(),
+                        content: 'CSS中，哪个属性用于设置元素的外边距？',
+                        type: 'single',
+                        options: ['padding', 'border', 'margin', 'spacing'],
+                        answer: '2',
+                        analysis: 'margin属性用于设置元素的外边距，控制元素与其他元素之间的距离。',
+                        source: 'rich-demo',
+                        createTime: new Date().toISOString(),
+                        difficulty: 1,
+                        category: 'CSS基础',
+                        tags: ['CSS', '盒模型']
+                    }
+                ];
+                
+                const richDemoPersonalQuestions = [
+                    {
+                        id: 'rich_per_1_' + Date.now(),
+                        content: 'Vue组件的data选项必须是一个函数。',
+                        type: 'judge',
+                        answer: 'true',
+                        analysis: '在Vue组件中，data选项必须是一个函数，这样每个实例可以维护独立的数据副本，避免数据污染。',
+                        source: 'rich-demo',
+                        createTime: new Date().toISOString(),
+                        difficulty: 2,
+                        category: 'Vue',
+                        tags: ['Vue', '组件', 'data选项']
+                    }
+                ];
+                
+                let publicQuestions = [];
+                let personalQuestions = [];
+                
+                // 根据同步类型添加题目
+                if (syncType === 'both' || syncType === 'public') {
+                    publicQuestions = [...this.publicQuestionBank, ...richDemoPublicQuestions];
+                    this.log(`📚 同步公共题目: ${publicQuestions.length} 道`);
+                }
+                
+                if (syncType === 'both' || syncType === 'personal') {
+                    personalQuestions = [...this.personalQuestionBank, ...richDemoPersonalQuestions];
+                    this.log(`📝 同步个人题目: ${personalQuestions.length} 道`);
+                }
+                
+                // 创建同步数据对象
+                const syncData = {
+                    deviceId: this.getDeviceId(),
+                    timestamp: Date.now(),
+                    syncType: syncType,
+                    syncCount: publicQuestions.length + personalQuestions.length,
+                    publicQuestionCount: publicQuestions.length,
+                    personalQuestionCount: personalQuestions.length,
+                    data: {
+                        deviceInfo: {
+                            type: 'desktop',
+                            browser: navigator.userAgent,
+                            timestamp: Date.now(),
+                            syncType: syncType
+                        },
+                        // 直接添加题目数据
+                        publicQuestions: publicQuestions,
+                        personalQuestions: personalQuestions
+                    }
+                };
+                
+                this.log('🔍 同步数据验证:');
+                this.log('   - 公共题目数量:', syncData.data.publicQuestions ? syncData.data.publicQuestions.length : 0);
+                this.log('   - 个人题目数量:', syncData.data.personalQuestions ? syncData.data.personalQuestions.length : 0);
+                this.log('   - 总题目数量:', syncData.syncCount);
+                
+                const syncDataString = JSON.stringify(syncData, null, 2);
+                const encodedData = btoa(syncDataString);
+                
+                this.log(`📏 同步数据大小: ${encodedData.length} 字符`);
+                
+                // 显示结果
+                const syncResult = document.getElementById('syncResult');
+                syncResult.innerHTML = `
+                    <h3 class="font-semibold text-gray-700 mb-2">📱 同步数据结果</h3>
+                    <div class="text-sm">
+                        <div class="mb-1"><span class="text-green-600">✓</span> 设备ID: ${syncData.deviceId}</div>
+                        <div class="mb-1"><span class="text-green-600">✓</span> 同步类型: ${syncData.syncType}</div>
+                        <div class="mb-1"><span class="text-green-600">✓</span> 公共题目: ${syncData.data.publicQuestions ? syncData.data.publicQuestions.length : 0} 道</div>
+                        <div class="mb-1"><span class="text-green-600">✓</span> 个人题目: ${syncData.data.personalQuestions ? syncData.data.personalQuestions.length : 0} 道</div>
+                        <div class="mb-1"><span class="text-green-600">✓</span> 总题目数: ${syncData.syncCount} 道</div>
+                        <div class="mb-1"><span class="text-green-600">✓</span> 编码后大小: ${encodedData.length} 字符</div>
+                    </div>
+                `;
+                
+                this.log('✅ 同步数据生成完成');
+                
+                return {
+                    syncData: syncData,
+                    encodedData: encodedData
+                };
+            }
+
+            addDemoQuestions() {
+                const demoPublicQuestions = [
+                    {
+                        id: 'demo_pub_' + Date.now() + '_1',
+                        content: 'HTML中，哪个标签用于定义表格？',
+                        type: 'single',
+                        options: ['<table>', '<tr>', '<td>', '<div>'],
+                        answer: '0',
+                        analysis: '<table>标签用于定义HTML表格。',
+                        source: 'demo',
+                        createTime: new Date().toISOString(),
+                        difficulty: 1,
+                        category: 'HTML基础',
+                        tags: ['HTML', '表格']
+                    }
+                ];
+
+                const demoPersonalQuestions = [
+                    {
+                        id: 'demo_per_' + Date.now() + '_1',
+                        content: 'JavaScript中，null是一个对象。',
+                        type: 'judge',
+                        answer: 'true',
+                        analysis: '在JavaScript中，typeof null 返回 "object"，这是JavaScript的一个历史遗留问题。',
+                        source: 'demo',
+                        createTime: new Date().toISOString(),
+                        difficulty: 2,
+                        category: 'JavaScript',
+                        tags: ['JS', '数据类型']
+                    }
+                ];
+
+                this.publicQuestionBank.push(...demoPublicQuestions);
+                this.personalQuestionBank.push(...demoPersonalQuestions);
+                this.saveData();
+                
+                this.log(`✅ 添加了 ${demoPublicQuestions.length} 道公共题目和 ${demoPersonalQuestions.length} 道个人题目`);
+            }
+
+            clearAllData() {
+                this.publicQuestionBank = [];
+                this.personalQuestionBank = [];
+                this.mistakeBank = [];
+                this.studyStats = { totalQuestions: 0, correctAnswers: 0, studyTime: 0 };
+                localStorage.removeItem('publicQuestionBank');
+                localStorage.removeItem('personalQuestionBank');
+                this.log('🗑️ 已清空所有数据');
+            }
+
+            log(...messages) {
+                const logContainer = document.getElementById('logContainer');
+                const logEntry = document.createElement('div');
+                const timestamp = new Date().toLocaleTimeString('zh-CN');
+                logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${messages.map(msg => 
+                    typeof msg === 'object' ? JSON.stringify(msg) : msg
+                ).join(' ')}`;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                // 限制日志条目数量
+                if (logContainer.children.length > 100) {
+                    logContainer.removeChild(logContainer.firstChild);
+                }
+            }
+        }
+
+        // 初始化应用
+        const examSystem = new MockExamSystem();
+
+        // 事件监听器
+        document.getElementById('exportDataBtn').addEventListener('click', async () => {
+            try {
+                const exportStatus = document.getElementById('exportStatus');
+                exportStatus.classList.remove('hidden');
+                exportStatus.innerHTML = '<div class="text-blue-600">⏳ 正在导出数据...</div>';
+                
+                await examSystem.exportSyncData();
+                
+                exportStatus.innerHTML = '<div class="text-green-600">✅ 数据导出成功！</div>';
+            } catch (error) {
+                examSystem.log('❌ 导出失败:', error.message);
+                document.getElementById('exportStatus').innerHTML = `<div class="text-red-600">❌ 导出失败: ${error.message}</div>`;
+            }
+        });
+
+        document.getElementById('generateSyncDataBtn').addEventListener('click', () => {
+            try {
+                const syncType = document.getElementById('syncType').value;
+                const syncStatus = document.getElementById('syncStatus');
+                syncStatus.classList.remove('hidden');
+                syncStatus.innerHTML = '<div class="text-green-600">⏳ 正在生成同步数据...</div>';
+                
+                const result = examSystem.generateSyncQRData(syncType);
+                
+                syncStatus.innerHTML = `
+                    <div class="text-green-600">✅ 同步数据生成成功！</div>
+                    <div class="mt-2 text-xs text-gray-600">
+                        编码后数据长度: ${result.encodedData.length} 字符
+                    </div>
+                `;
+            } catch (error) {
+                examSystem.log('❌ 同步数据生成失败:', error.message);
+                document.getElementById('syncStatus').innerHTML = `<div class="text-red-600">❌ 生成失败: ${error.message}</div>`;
+            }
+        });
+
+        document.getElementById('clearLogBtn').addEventListener('click', () => {
+            document.getElementById('logContainer').innerHTML = '';
+            examSystem.log('🧹 日志已清空');
+        });
+
+        // 添加一些演示数据
+        examSystem.addDemoQuestions();
+        
+        // 初始化显示
+        examSystem.log('🚀 测试页面加载完成');
+        examSystem.log('📱 设备ID:', examSystem.getDeviceId());
+    </script>
+</body>
+</html>

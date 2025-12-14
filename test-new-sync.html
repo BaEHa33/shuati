@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新同步系统测试 - 智能刷题系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        .btn-primary {
+            background-color: #07c160;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #06ad56;
+        }
+        .btn-secondary {
+            background-color: #f7f8fa;
+            color: #333;
+            border: 1px solid #e5e6eb;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background-color: #f2f3f5;
+            border-color: #dfe1e5;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-success {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .status-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .status-warning {
+            background-color: #fef9c3;
+            color: #854d0e;
+        }
+        .status-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border-radius: 0.25rem;
+            border-left: 4px solid;
+        }
+        .log-success {
+            background-color: #f0fdf4;
+            color: #166534;
+            border-left-color: #22c55e;
+        }
+        .log-error {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-left-color: #ef4444;
+        }
+        .log-warning {
+            background-color: #fefce8;
+            color: #92400e;
+            border-left-color: #f59e0b;
+        }
+        .log-info {
+            background-color: #f0f9ff;
+            color: #0369a1;
+            border-left-color: #0ea5e9;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">
+                <i class="fa fa-refresh text-green-500 mr-3"></i>
+                新同步系统测试
+            </h1>
+            <p class="text-gray-600 mb-6">
+                全面重新设计的同步系统，提供更稳定、更易用的数据导出和导入功能。
+                支持公共题库、个人题库、错题本和学习统计的完整同步。
+            </p>
+            
+            <!-- 系统状态 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-blue-800 mb-3 flex items-center">
+                        <i class="fa fa-server mr-2"></i>
+                        同步管理器状态
+                    </h3>
+                    <div id="syncManagerStatus" class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">模块加载:</span>
+                            <span id="moduleStatus" class="status-badge status-error">未加载</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">初始化状态:</span>
+                            <span id="initStatus" class="status-badge status-error">未初始化</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">设备ID:</span>
+                            <span id="deviceId" class="text-gray-600 font-mono text-sm">--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-green-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-green-800 mb-3 flex items-center">
+                        <i class="fa fa-user-circle mr-2"></i>
+                        用户状态
+                    </h3>
+                    <div id="userStatus" class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">登录状态:</span>
+                            <span id="loginStatus" class="status-badge status-error">未登录</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">当前用户:</span>
+                            <span id="currentUser" class="text-gray-600">--</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">用户ID:</span>
+                            <span id="userId" class="text-gray-600 font-mono text-sm">--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-purple-800 mb-3 flex items-center">
+                        <i class="fa fa-database mr-2"></i>
+                        数据统计
+                    </h3>
+                    <div id="dataStats" class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">公共题库:</span>
+                            <span id="publicBankCount" class="text-gray-600">0 题</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">个人题库:</span>
+                            <span id="personalBankCount" class="text-gray-600">0 题</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">错题本:</span>
+                            <span id="mistakeBankCount" class="text-gray-600">0 条</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 控制按钮 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fa fa-user mr-2"></i>
+                        用户控制
+                    </h3>
+                    <div class="space-y-3">
+                        <button id="loginBtn" class="btn-primary w-full py-3 flex items-center justify-center">
+                            <i class="fa fa-sign-in mr-2"></i>
+                            模拟登录
+                        </button>
+                        <button id="logoutBtn" class="btn-secondary w-full py-3 flex items-center justify-center" disabled>
+                            <i class="fa fa-sign-out mr-2"></i>
+                            退出登录
+                        </button>
+                        <button id="checkStatusBtn" class="btn-secondary w-full py-3 flex items-center justify-center">
+                            <i class="fa fa-refresh mr-2"></i>
+                            检查系统状态
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fa fa-exchange mr-2"></i>
+                        同步功能
+                    </h3>
+                    <div class="space-y-3">
+                        <button id="exportBtn" class="btn-primary w-full py-3 flex items-center justify-center" disabled>
+                            <i class="fa fa-download mr-2"></i>
+                            导出数据
+                        </button>
+                        <button id="importBtn" class="btn-secondary w-full py-3 flex items-center justify-center" disabled>
+                            <i class="fa fa-upload mr-2"></i>
+                            导入数据
+                        </button>
+                        <button id="qrcodeBtn" class="btn-secondary w-full py-3 flex items-center justify-center" disabled>
+                            <i class="fa fa-qrcode mr-2"></i>
+                            扫码同步
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 导出选项 -->
+            <div id="exportOptions" class="bg-gray-50 rounded-lg p-6 mb-8 hidden">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fa fa-cog mr-2"></i>
+                    导出选项
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="includePublic" class="w-4 h-4 text-green-600 rounded" checked>
+                        <label for="includePublic" class="ml-2 text-gray-700">包含公共题库</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="includePersonal" class="w-4 h-4 text-green-600 rounded" checked>
+                        <label for="includePersonal" class="ml-2 text-gray-700">包含个人题库</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="includeMistakes" class="w-4 h-4 text-green-600 rounded" checked>
+                        <label for="includeMistakes" class="ml-2 text-gray-700">包含错题本</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="includeStats" class="w-4 h-4 text-green-600 rounded" checked>
+                        <label for="includeStats" class="ml-2 text-gray-700">包含学习统计</label>
+                    </div>
+                    <div class="pt-4">
+                        <button id="confirmExportBtn" class="btn-primary w-full py-3">
+                            <i class="fa fa-check mr-2"></i>
+                            确认导出
+                        </button>
+                        <button id="cancelExportBtn" class="btn-secondary w-full py-3 mt-3">
+                            <i class="fa fa-times mr-2"></i>
+                            取消
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 调试信息 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 系统日志 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fa fa-terminal mr-2"></i>
+                    系统日志
+                    <button id="clearLogBtn" class="ml-auto btn-secondary text-sm px-3 py-1">
+                        <i class="fa fa-trash mr-1"></i>
+                        清空
+                    </button>
+                </h3>
+                <div id="systemLog" class="max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div class="log-info">🟢 页面加载完成，等待系统初始化...</div>
+                </div>
+            </div>
+            
+            <!-- 导出数据预览 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fa fa-file-text mr-2"></i>
+                    数据预览
+                    <button id="generatePreviewBtn" class="ml-auto btn-secondary text-sm px-3 py-1" disabled>
+                        <i class="fa fa-refresh mr-1"></i>
+                        生成预览
+                    </button>
+                </h3>
+                <div id="dataPreview" class="max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div class="text-gray-500 text-center py-8">
+                        <i class="fa fa-file-o text-4xl mb-2"></i>
+                        <p>点击"生成预览"查看数据结构</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 日志系统
+        class Logger {
+            constructor() {
+                this.logContainer = document.getElementById('systemLog');
+                this.maxEntries = 100;
+            }
+            
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString('zh-CN');
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry log-${type}`;
+                logEntry.innerHTML = `[${timestamp}] ${message}`;
+                
+                // 添加到容器
+                this.logContainer.appendChild(logEntry);
+                
+                // 限制日志数量
+                const entries = this.logContainer.querySelectorAll('.log-entry');
+                if (entries.length > this.maxEntries) {
+                    this.logContainer.removeChild(entries[0]);
+                }
+                
+                // 滚动到底部
+                this.logContainer.scrollTop = this.logContainer.scrollHeight;
+            }
+            
+            success(message) {
+                this.log(`✅ ${message}`, 'success');
+            }
+            
+            error(message) {
+                this.log(`❌ ${message}`, 'error');
+            }
+            
+            warning(message) {
+                this.log(`⚠️ ${message}`, 'warning');
+            }
+            
+            info(message) {
+                this.log(`ℹ️ ${message}`, 'info');
+            }
+            
+            clear() {
+                this.logContainer.innerHTML = '';
+                this.info('日志已清空');
+            }
+        }
+        
+        const logger = new Logger();
+        
+        // 模拟用户数据
+        let mockCurrentUser = null;
+        
+        // 模拟应用数据
+        const mockAppData = {
+            publicQuestionBank: [
+                {
+                    id: 'pub_1',
+                    content: 'HTML5中用于定义文档主要内容的标签是：',
+                    type: 'single',
+                    options: ['<header>', '<main>', '<section>', '<article>'],
+                    answer: '1',
+                    analysis: '<main>标签定义文档的主要内容。',
+                    source: 'system',
+                    createTime: new Date().toISOString(),
+                    difficulty: 2,
+                    category: 'HTML5',
+                    tags: ['HTML', '语义化标签']
+                },
+                {
+                    id: 'pub_2',
+                    content: 'CSS中，哪个属性用于设置元素的外边距？',
+                    type: 'single',
+                    options: ['padding', 'border', 'margin', 'spacing'],
+                    answer: '2',
+                    analysis: 'margin属性用于设置元素的外边距。',
+                    source: 'system',
+                    createTime: new Date().toISOString(),
+                    difficulty: 1,
+                    category: 'CSS基础',
+                    tags: ['CSS', '盒模型']
+                }
+            ],
+            personalQuestionBank: [
+                {
+                    id: 'per_1',
+                    content: 'Vue组件的data选项必须是一个函数。',
+                    type: 'judge',
+                    answer: 'true',
+                    analysis: '在Vue组件中，data选项必须是一个函数。',
+                    source: 'user',
+                    createTime: new Date().toISOString(),
+                    difficulty: 2,
+                    category: 'Vue',
+                    tags: ['Vue', '组件']
+                }
+            ],
+            mistakeBank: [
+                {
+                    id: 'mistake_1',
+                    questionId: 'pub_1',
+                    content: 'HTML5中用于定义文档主要内容的标签是：',
+                    userAnswer: '0',
+                    correctAnswer: '1',
+                    mistakeTime: new Date().toISOString(),
+                    isImportant: false
+                }
+            ],
+            studyStats: {
+                totalQuestions: 150,
+                correctAnswers: 120,
+                totalStudyTime: 3600,
+                examRecords: [
+                    {
+                        id: 'exam_1',
+                        score: 85,
+                        totalQuestions: 20,
+                        correctCount: 17,
+                        duration: 1800,
+                        date: new Date().toISOString()
+                    }
+                ]
+            }
+        };
+        
+        // 模拟Vue应用
+        const mockApp = {
+            currentUser: null,
+            publicQuestionBank: [...mockAppData.publicQuestionBank],
+            personalQuestionBank: [...mockAppData.personalQuestionBank],
+            mistakeBank: [...mockAppData.mistakeBank],
+            studyStats: { ...mockAppData.studyStats },
+            syncStatus: 'synced',
+            lastSyncTime: new Date().toISOString(),
+            
+            saveUserData() {
+                logger.success('用户数据已保存');
+            },
+            
+            updateBankStats() {
+                logger.info('题库统计已更新');
+            }
+        };
+        
+        // 更新系统状态显示
+        function updateSystemStatus() {
+            logger.info('更新系统状态显示...');
+            
+            // 同步管理器状态
+            const moduleStatus = document.getElementById('moduleStatus');
+            const initStatus = document.getElementById('initStatus');
+            const deviceId = document.getElementById('deviceId');
+            
+            if (window.syncManager) {
+                moduleStatus.textContent = '已加载';
+                moduleStatus.className = 'status-badge status-success';
+                
+                initStatus.textContent = window.syncManager.isInitialized ? '已初始化' : '未初始化';
+                initStatus.className = window.syncManager.isInitialized ? 'status-badge status-success' : 'status-badge status-warning';
+                
+                deviceId.textContent = window.syncManager.deviceId || '--';
+                
+                logger.success('SyncManager模块状态已更新');
+            } else {
+                moduleStatus.textContent = '未加载';
+                moduleStatus.className = 'status-badge status-error';
+                initStatus.textContent = '未初始化';
+                initStatus.className = 'status-badge status-error';
+                deviceId.textContent = '--';
+                
+                logger.warning('SyncManager模块未加载');
+            }
+            
+            // 用户状态
+            const loginStatus = document.getElementById('loginStatus');
+            const currentUser = document.getElementById('currentUser');
+            const userId = document.getElementById('userId');
+            
+            if (mockCurrentUser) {
+                loginStatus.textContent = '已登录';
+                loginStatus.className = 'status-badge status-success';
+                currentUser.textContent = mockCurrentUser.username;
+                userId.textContent = mockCurrentUser.id;
+            } else {
+                loginStatus.textContent = '未登录';
+                loginStatus.className = 'status-badge status-error';
+                currentUser.textContent = '--';
+                userId.textContent = '--';
+            }
+            
+            // 数据统计
+            document.getElementById('publicBankCount').textContent = `${mockApp.publicQuestionBank.length} 题`;
+            document.getElementById('personalBankCount').textContent = `${mockApp.personalQuestionBank.length} 题`;
+            document.getElementById('mistakeBankCount').textContent = `${mockApp.mistakeBank.length} 条`;
+            
+            // 更新按钮状态
+            updateButtonStates();
+        }
+        
+        // 更新按钮状态
+        function updateButtonStates() {
+            const exportBtn = document.getElementById('exportBtn');
+            const importBtn = document.getElementById('importBtn');
+            const qrcodeBtn = document.getElementById('qrcodeBtn');
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const generatePreviewBtn = document.getElementById('generatePreviewBtn');
+            
+            const isLoggedIn = !!mockCurrentUser;
+            const isSyncManagerReady = window.syncManager && window.syncManager.isInitialized;
+            
+            exportBtn.disabled = !isLoggedIn || !isSyncManagerReady;
+            importBtn.disabled = !isLoggedIn || !isSyncManagerReady;
+            qrcodeBtn.disabled = !isLoggedIn;
+            loginBtn.disabled = isLoggedIn;
+            logoutBtn.disabled = !isLoggedIn;
+            generatePreviewBtn.disabled = !isLoggedIn || !isSyncManagerReady;
+            
+            // 更新按钮样式
+            [exportBtn, importBtn, qrcodeBtn, generatePreviewBtn].forEach(btn => {
+                if (btn.disabled) {
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 max-w-xs p-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out`;
+            
+            switch (type) {
+                case 'success':
+                    notification.style.backgroundColor = '#f0fdf4';
+                    notification.style.borderLeft = '4px solid #22c55e';
+                    break;
+                case 'error':
+                    notification.style.backgroundColor = '#fef2f2';
+                    notification.style.borderLeft = '4px solid #ef4444';
+                    break;
+                case 'warning':
+                    notification.style.backgroundColor = '#fefce8';
+                    notification.style.borderLeft = '4px solid #f59e0b';
+                    break;
+                default:
+                    notification.style.backgroundColor = '#f0f9ff';
+                    notification.style.borderLeft = '4px solid #0ea5e9';
+            }
+            
+            notification.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <i class="fa fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} text-${type === 'success' ? 'green' : type === 'error' ? 'red' : type === 'warning' ? 'amber' : 'blue'}-500 text-lg"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm font-medium text-gray-900">${message.replace(/\n/g, '<br>')}</p>
+                    </div>
+                    <button class="ml-4 text-gray-400 hover:text-gray-600 focus:outline-none" onclick="this.closest('.fixed').remove()">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+        
+        // 生成数据预览
+        function generateDataPreview() {
+            logger.info('生成数据预览...');
+            
+            const dataPreview = document.getElementById('dataPreview');
+            
+            if (!window.syncManager || !mockCurrentUser) {
+                dataPreview.innerHTML = `
+                    <div class="text-red-500 text-center py-8">
+                        <i class="fa fa-exclamation-circle text-4xl mb-2"></i>
+                        <p>无法生成预览，请确保已登录且同步模块已加载</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                // 准备预览数据
+                const previewData = {
+                    version: window.syncManager.version,
+                    deviceId: window.syncManager.deviceId,
+                    exportTime: new Date().toISOString(),
+                    userId: mockCurrentUser.id,
+                    username: mockCurrentUser.username,
+                    dataTypes: ['publicQuestions', 'personalQuestions', 'mistakeBank', 'studyStats'],
+                    stats: {
+                        publicQuestions: mockApp.publicQuestionBank.length,
+                        personalQuestions: mockApp.personalQuestionBank.length,
+                        mistakes: mockApp.mistakeBank.length,
+                        totalQuestions: mockApp.publicQuestionBank.length + mockApp.personalQuestionBank.length
+                    },
+                    // 只显示部分数据用于预览
+                    publicQuestions_sample: mockApp.publicQuestionBank.slice(0, 1),
+                    personalQuestions_sample: mockApp.personalQuestionBank.slice(0, 1),
+                    mistakeBank_sample: mockApp.mistakeBank.slice(0, 1),
+                    studyStats_summary: {
+                        totalQuestions: mockApp.studyStats.totalQuestions,
+                        correctAnswers: mockApp.studyStats.correctAnswers,
+                        examRecords: mockApp.studyStats.examRecords.length
+                    }
+                };
+                
+                const jsonString = JSON.stringify(previewData, null, 2);
+                dataPreview.innerHTML = `
+                    <pre class="text-sm text-gray-800 whitespace-pre-wrap">${jsonString}</pre>
+                    <div class="mt-3 text-xs text-gray-500 text-center">
+                        这是导出数据的预览，实际导出将包含完整数据
+                    </div>
+                `;
+                
+                logger.success('数据预览生成成功');
+            } catch (error) {
+                logger.error(`生成预览失败: ${error.message}`);
+                dataPreview.innerHTML = `
+                    <div class="text-red-500 text-center py-8">
+                        <i class="fa fa-exclamation-triangle text-4xl mb-2"></i>
+                        <p>生成预览时出错: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 初始化同步管理器
+        async function initializeSyncManager() {
+            logger.info('尝试初始化SyncManager...');
+            
+            if (window.syncManager) {
+                try {
+                    const success = await window.syncManager.initialize();
+                    if (success) {
+                        logger.success('SyncManager初始化成功');
+                        showNotification('同步系统初始化成功！', 'success');
+                    } else {
+                        logger.error('SyncManager初始化失败');
+                        showNotification('同步系统初始化失败', 'error');
+                    }
+                } catch (error) {
+                    logger.error(`SyncManager初始化异常: ${error.message}`);
+                    showNotification(`同步系统初始化异常: ${error.message}`, 'error');
+                }
+            } else {
+                logger.warning('SyncManager模块未加载');
+                showNotification('同步模块未加载，请刷新页面重试', 'warning');
+            }
+            
+            updateSystemStatus();
+        }
+        
+        // 事件监听器设置
+        function setupEventListeners() {
+            logger.info('设置事件监听器...');
+            
+            // 登录按钮
+            document.getElementById('loginBtn').addEventListener('click', () => {
+                const username = prompt('请输入用户名:', 'test_user');
+                if (username && username.trim()) {
+                    mockCurrentUser = {
+                        id: 'user_' + username.trim(),
+                        username: username.trim()
+                    };
+                    mockApp.currentUser = mockCurrentUser;
+                    updateSystemStatus();
+                    logger.success(`用户 ${username} 登录成功`);
+                    showNotification(`欢迎回来，${username}！`, 'success');
+                }
+            });
+            
+            // 退出登录按钮
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                if (confirm('确定要退出登录吗？')) {
+                    mockCurrentUser = null;
+                    mockApp.currentUser = null;
+                    updateSystemStatus();
+                    logger.info('用户已退出登录');
+                    showNotification('已退出登录', 'info');
+                }
+            });
+            
+            // 检查状态按钮
+            document.getElementById('checkStatusBtn').addEventListener('click', () => {
+                logger.info('手动检查系统状态...');
+                updateSystemStatus();
+                initializeSyncManager();
+            });
+            
+            // 导出按钮
+            document.getElementById('exportBtn').addEventListener('click', () => {
+                document.getElementById('exportOptions').classList.remove('hidden');
+                logger.info('显示导出选项');
+            });
+            
+            // 确认导出按钮
+            document.getElementById('confirmExportBtn').addEventListener('click', async () => {
+                const includePublic = document.getElementById('includePublic').checked;
+                const includePersonal = document.getElementById('includePersonal').checked;
+                const includeMistakes = document.getElementById('includeMistakes').checked;
+                const includeStats = document.getElementById('includeStats').checked;
+                
+                document.getElementById('exportOptions').classList.add('hidden');
+                
+                if (!window.syncManager) {
+                    logger.error('SyncManager未加载');
+                    showNotification('同步模块未加载，请刷新页面重试', 'error');
+                    return;
+                }
+                
+                try {
+                    logger.info('开始导出数据...');
+                    showNotification('正在导出数据，请稍候...', 'info');
+                    
+                    await window.syncManager.exportData({
+                        includePublic,
+                        includePersonal,
+                        includeMistakes,
+                        includeStats
+                    });
+                    
+                    logger.success('数据导出成功');
+                    showNotification('数据导出成功！文件已下载', 'success');
+                } catch (error) {
+                    logger.error(`导出失败: ${error.message}`);
+                    showNotification(`导出失败: ${error.message}`, 'error');
+                }
+            });
+            
+            // 取消导出按钮
+            document.getElementById('cancelExportBtn').addEventListener('click', () => {
+                document.getElementById('exportOptions').classList.add('hidden');
+                logger.info('导出操作已取消');
+            });
+            
+            // 导入按钮
+            document.getElementById('importBtn').addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.style.cssText = 'position: fixed; top: -9999px; left: -9999px;';
+                document.body.appendChild(input);
+                
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        try {
+                            logger.info(`开始导入文件: ${file.name}`);
+                            showNotification('正在导入数据，请稍候...', 'info');
+                            
+                            if (!window.syncManager) {
+                                throw new Error('同步模块未加载');
+                            }
+                            
+                            const results = await window.syncManager.importData(file);
+                            
+                            if (results.success) {
+                                logger.success('数据导入成功');
+                                let message = '数据导入成功！\n';
+                                if (results.imported.publicQuestions) {
+                                    message += `- 公共题库: ${results.imported.publicQuestions} 题\n`;
+                                }
+                                if (results.imported.personalQuestions) {
+                                    message += `- 个人题库: ${results.imported.personalQuestions} 题\n`;
+                                }
+                                if (results.imported.mistakes) {
+                                    message += `- 错题本: ${results.imported.mistakes} 条\n`;
+                                }
+                                if (results.imported.studyStats) {
+                                    message += `- 学习统计: 已更新\n`;
+                                }
+                                showNotification(message, 'success');
+                                
+                                // 更新显示
+                                updateSystemStatus();
+                            } else {
+                                logger.warning('数据导入部分失败');
+                                showNotification(`导入完成，但有部分错误:\n${results.errors.join('\\n')}`, 'warning');
+                            }
+                        } catch (error) {
+                            logger.error(`导入失败: ${error.message}`);
+                            showNotification(`导入失败: ${error.message}`, 'error');
+                        } finally {
+                            document.body.removeChild(input);
+                        }
+                    }
+                };
+                
+                input.click();
+            });
+            
+            // 扫码同步按钮
+            document.getElementById('qrcodeBtn').addEventListener('click', () => {
+                showNotification('扫码同步功能正在开发中，请使用导出/导入功能进行数据同步', 'info');
+            });
+            
+            // 清空日志按钮
+            document.getElementById('clearLogBtn').addEventListener('click', () => {
+                logger.clear();
+            });
+            
+            // 生成预览按钮
+            document.getElementById('generatePreviewBtn').addEventListener('click', () => {
+                generateDataPreview();
+            });
+            
+            logger.success('所有事件监听器设置完成');
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            logger.info('页面DOM加载完成');
+            
+            // 设置全局应用实例
+            window.app = mockApp;
+            
+            // 设置事件监听器
+            setupEventListeners();
+            
+            // 初始更新状态
+            updateSystemStatus();
+            
+            // 尝试初始化同步管理器
+            setTimeout(() => {
+                initializeSyncManager();
+            }, 1000);
+            
+            // 定期检查状态
+            setInterval(() => {
+                if (window.syncManager && !window.syncManager.isInitialized) {
+                    initializeSyncManager();
+                }
+                updateSystemStatus();
+            }, 5000);
+            
+            logger.success('系统初始化完成');
+        });
+    </script>
+</body>
+</html>

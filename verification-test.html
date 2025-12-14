@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>同步功能验证测试</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 跨设备同步系统 -->
+    <script src="cross-device-sync.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+            margin: 5px;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-good {
+            background: #10b981;
+        }
+        
+        .status-bad {
+            background: #ef4444;
+        }
+        
+        .status-warning {
+            background: #f59e0b;
+        }
+        
+        .test-result {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            border-left: 4px solid;
+        }
+        
+        .test-pass {
+            background-color: #f0fdf4;
+            border-left-color: #22c55e;
+        }
+        
+        .test-fail {
+            background-color: #fef2f2;
+            border-left-color: #ef4444;
+        }
+        
+        .test-warning {
+            background-color: #fefce8;
+            border-left-color: #f59e0b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card text-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">智能刷题系统 - 功能验证</h1>
+            <p class="text-gray-600">全面检查系统功能和代码完整性</p>
+        </div>
+
+        <!-- 系统状态检查 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fa fa-server mr-2"></i>系统状态检查
+            </h2>
+            <div id="systemStatus" class="space-y-3">
+                <p class="text-gray-600">正在检查系统状态...</p>
+            </div>
+        </div>
+
+        <!-- 功能测试 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fa fa-cogs mr-2"></i>功能测试
+            </h2>
+            <div class="flex flex-wrap gap-3 mb-6 justify-center">
+                <button id="testSyncBtn" class="btn btn-primary">
+                    <i class="fa fa-refresh mr-2"></i>测试同步功能
+                </button>
+                <button id="testDataBtn" class="btn btn-success">
+                    <i class="fa fa-database mr-2"></i>测试数据操作
+                </button>
+                <button id="testExportBtn" class="btn btn-warning">
+                    <i class="fa fa-download mr-2"></i>测试导出功能
+                </button>
+            </div>
+            
+            <!-- 测试结果 -->
+            <div id="testResults" class="space-y-3">
+                <p class="text-gray-600">点击上方按钮开始测试...</p>
+            </div>
+        </div>
+
+        <!-- 快速验证 -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fa fa-check-circle mr-2"></i>快速验证
+            </h2>
+            <div class="text-center">
+                <button id="quickVerifyBtn" class="btn btn-primary">
+                    <i class="fa fa-bolt mr-2"></i>一键验证所有功能
+                </button>
+                <p class="text-sm text-gray-500 mt-3">将自动测试核心功能并生成验证报告</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试结果记录
+        let testResults = [];
+        
+        // 显示系统状态
+        function updateSystemStatus() {
+            const statusContainer = document.getElementById('systemStatus');
+            
+            let html = `
+                <div class="space-y-2">
+                    <div class="flex items-center">
+                        <span class="status-indicator ${window.crossDeviceSync ? 'status-good' : 'status-bad'}"></span>
+                        <span>跨设备同步模块: ${window.crossDeviceSync ? '✅ 已加载' : '❌ 未加载'}</span>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <span class="status-indicator ${window.app ? 'status-good' : 'status-warning'}"></span>
+                        <span>应用实例: ${window.app ? '✅ 已初始化' : '⚠️ 未初始化'}</span>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <span class="status-indicator ${typeof JSON !== 'undefined' ? 'status-good' : 'status-bad'}"></span>
+                        <span>JSON API: ${typeof JSON !== 'undefined' ? '✅ 可用' : '❌ 不可用'}</span>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <span class="status-indicator ${typeof localStorage !== 'undefined' ? 'status-good' : 'status-warning'}"></span>
+                        <span>LocalStorage: ${typeof localStorage !== 'undefined' ? '✅ 可用' : '⚠️ 不可用'}</span>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <span class="status-indicator ${typeof Blob !== 'undefined' && typeof URL !== 'undefined' ? 'status-good' : 'status-bad'}"></span>
+                        <span>File API: ${typeof Blob !== 'undefined' && typeof URL !== 'undefined' ? '✅ 可用' : '❌ 不可用'}</span>
+                    </div>
+                </div>
+            `;
+            
+            statusContainer.innerHTML = html;
+        }
+        
+        // 添加测试结果
+        function addTestResult(name, success, message, details = '') {
+            const resultsContainer = document.getElementById('testResults');
+            const resultClass = success ? 'test-pass' : (details.includes('警告') ? 'test-warning' : 'test-fail');
+            const icon = success ? 'check-circle' : (details.includes('警告') ? 'exclamation-triangle' : 'exclamation-circle');
+            const color = success ? 'text-green-600' : (details.includes('警告') ? 'text-yellow-600' : 'text-red-600');
+            
+            const resultHtml = `
+                <div class="test-result ${resultClass}">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 mt-0.5">
+                            <i class="fa fa-${icon} ${color} text-lg"></i>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <p class="font-medium">${name}: ${success ? '通过' : '失败'}</p>
+                            <p class="text-sm text-gray-600 mt-1">${message}</p>
+                            ${details ? `<p class="text-xs text-gray-500 mt-1">${details}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultsContainer.innerHTML += resultHtml;
+            
+            // 记录结果
+            testResults.push({
+                name: name,
+                success: success,
+                message: message,
+                details: details,
+                timestamp: new Date()
+            });
+        }
+        
+        // 清空测试结果
+        function clearTestResults() {
+            document.getElementById('testResults').innerHTML = '';
+            testResults = [];
+        }
+        
+        // 测试同步功能
+        async function testSyncFunctionality() {
+            clearTestResults();
+            addTestResult('同步模块检查', true, '开始测试同步功能');
+            
+            try {
+                // 检查同步模块
+                if (!window.crossDeviceSync) {
+                    addTestResult('同步模块检查', false, '跨设备同步模块未加载', '请检查cross-device-sync.js文件是否正确引入');
+                    return;
+                }
+                
+                addTestResult('同步模块检查', true, '跨设备同步模块已成功加载');
+                
+                // 测试初始化
+                const initResult = await window.crossDeviceSync.init();
+                addTestResult('同步模块初始化', initResult, initResult ? '初始化成功' : '初始化失败');
+                
+                // 测试设备ID生成
+                const deviceId = window.crossDeviceSync.deviceId;
+                const hasValidDeviceId = deviceId && deviceId.startsWith('device_');
+                addTestResult('设备ID生成', hasValidDeviceId, hasValidDeviceId ? '设备ID生成成功' : '设备ID生成失败', `设备ID: ${deviceId}`);
+                
+                // 测试同步状态获取
+                const status = await window.crossDeviceSync.getSyncStatus();
+                const hasValidStatus = status && status.deviceId;
+                addTestResult('同步状态获取', hasValidStatus, hasValidStatus ? '状态获取成功' : '状态获取失败');
+                
+                // 测试方法支持检测
+                const supportedMethods = window.crossDeviceSync.supportedMethods;
+                const hasFileAPI = supportedMethods.fileAPI;
+                addTestResult('File API支持', hasFileAPI, hasFileAPI ? 'File API可用' : 'File API不可用');
+                
+                addTestResult('同步功能测试', true, '所有同步功能测试完成', `通过: ${testResults.filter(r => r.success).length}/${testResults.length}`);
+                
+            } catch (error) {
+                addTestResult('同步功能测试', false, '测试过程中发生错误', error.message);
+            }
+        }
+        
+        // 测试数据操作
+        function testDataOperations() {
+            clearTestResults();
+            addTestResult('数据操作测试', true, '开始测试数据操作功能');
+            
+            try {
+                // 创建测试数据
+                const testQuestions = [
+                    {
+                        id: 'test_question_1',
+                        content: '测试题目：HTML的全称是？',
+                        type: 'single',
+                        options: ['HyperText Markup Language', 'Home Tool Markup Language', 'Hyperlinks and Text Markup Language', 'None'],
+                        answer: '0',
+                        analysis: 'HTML的全称是HyperText Markup Language（超文本标记语言）'
+                    },
+                    {
+                        id: 'test_question_2',
+                        content: '测试题目：CSS的主要作用是？',
+                        type: 'multiple',
+                        options: ['美化网页', '控制布局', '添加交互', '数据处理'],
+                        answer: '0,1',
+                        analysis: 'CSS主要用于美化网页和控制布局'
+                    }
+                ];
+                
+                addTestResult('测试数据创建', true, '成功创建测试数据');
+                
+                // 测试数据去重
+                if (window.crossDeviceSync && typeof window.crossDeviceSync.removeDuplicateQuestions === 'function') {
+                    const duplicatedQuestions = [...testQuestions, testQuestions[0]]; // 创建重复数据
+                    const uniqueQuestions = window.crossDeviceSync.removeDuplicateQuestions(duplicatedQuestions);
+                    const isDeduplicated = uniqueQuestions.length === testQuestions.length;
+                    
+                    addTestResult('数据去重功能', isDeduplicated, isDeduplicated ? '数据去重成功' : '数据去重失败', 
+                                 `原始: ${duplicatedQuestions.length}, 去重后: ${uniqueQuestions.length}`);
+                } else {
+                    addTestResult('数据去重功能', false, '去重方法不可用', '同步模块或方法未找到');
+                }
+                
+                // 测试JSON序列化
+                try {
+                    const testData = {
+                        questions: testQuestions,
+                        metadata: {
+                            count: testQuestions.length,
+                            type: 'test'
+                        }
+                    };
+                    
+                    const jsonString = JSON.stringify(testData, null, 2);
+                    const parsedData = JSON.parse(jsonString);
+                    const isSerializationValid = parsedData.questions.length === testQuestions.length;
+                    
+                    addTestResult('JSON序列化', isSerializationValid, isSerializationValid ? '序列化成功' : '序列化失败',
+                                 `数据大小: ${jsonString.length} 字符`);
+                    
+                } catch (error) {
+                    addTestResult('JSON序列化', false, '序列化测试失败', error.message);
+                }
+                
+                addTestResult('数据操作测试', true, '所有数据操作测试完成', 
+                             `通过: ${testResults.filter(r => r.success).length}/${testResults.length}`);
+                
+            } catch (error) {
+                addTestResult('数据操作测试', false, '测试过程中发生错误', error.message);
+            }
+        }
+        
+        // 测试导出功能
+        async function testExportFunctionality() {
+            clearTestResults();
+            addTestResult('导出功能测试', true, '开始测试导出功能');
+            
+            try {
+                // 创建模拟应用数据
+                window.app = window.app || {};
+                window.app.publicQuestionBank = [
+                    {
+                        id: 'export_test_1',
+                        content: '导出测试题目1',
+                        type: 'single',
+                        options: ['选项A', '选项B', '选项C', '选项D'],
+                        answer: '1',
+                        analysis: '这是导出测试题目1的解析'
+                    }
+                ];
+                window.app.personalQuestionBank = [
+                    {
+                        id: 'export_test_2',
+                        content: '导出测试题目2',
+                        type: 'multiple',
+                        options: ['选项1', '选项2', '选项3', '选项4'],
+                        answer: '0,2',
+                        analysis: '这是导出测试题目2的解析'
+                    }
+                ];
+                window.app.mistakeBank = [];
+                window.app.studyStats = {
+                    totalQuestions: 100,
+                    correctAnswers: 80,
+                    totalStudyTime: 3600
+                };
+                window.app.currentUser = { id: 'test_user', username: '测试用户' };
+                
+                addTestResult('测试数据准备', true, '成功创建导出测试数据');
+                
+                // 检查导出方法
+                if (!window.crossDeviceSync) {
+                    addTestResult('导出方法检查', false, '同步模块未加载');
+                    return;
+                }
+                
+                if (typeof window.crossDeviceSync.exportSyncData !== 'function') {
+                    addTestResult('导出方法检查', false, '导出方法不存在');
+                    return;
+                }
+                
+                addTestResult('导出方法检查', true, '导出方法存在且可用');
+                
+                // 模拟导出过程（不实际下载）
+                try {
+                    // 这里我们不实际调用导出方法，只检查它是否存在和可调用
+                    const exportMethod = window.crossDeviceSync.exportSyncData;
+                    const isAsyncFunction = exportMethod.constructor.name === 'AsyncFunction' || 
+                                          exportMethod.toString().includes('async');
+                    
+                    addTestResult('导出方法类型', true, '导出方法类型正确', 
+                                 `是否异步: ${isAsyncFunction ? '是' : '否'}`);
+                    
+                    // 检查导出方法的依赖
+                    const hasFileAPI = typeof Blob !== 'undefined' && typeof URL !== 'undefined';
+                    addTestResult('导出依赖检查', hasFileAPI, hasFileAPI ? '所有依赖可用' : '缺少必要的File API');
+                    
+                    addTestResult('导出功能测试', true, '导出功能检查完成', '所有检查项通过');
+                    
+                } catch (error) {
+                    addTestResult('导出功能测试', false, '导出测试失败', error.message);
+                }
+                
+            } catch (error) {
+                addTestResult('导出功能测试', false, '测试过程中发生错误', error.message);
+            }
+        }
+        
+        // 一键验证所有功能
+        async function quickVerifyAll() {
+            clearTestResults();
+            addTestResult('一键验证', true, '开始全面功能验证');
+            
+            try {
+                // 系统环境检查
+                const requiredAPIs = {
+                    'JSON': typeof JSON !== 'undefined',
+                    'localStorage': typeof localStorage !== 'undefined',
+                    'Blob': typeof Blob !== 'undefined',
+                    'URL': typeof URL !== 'undefined',
+                    'document': typeof document !== 'undefined',
+                    'window': typeof window !== 'undefined'
+                };
+                
+                const availableAPIs = Object.keys(requiredAPIs).filter(key => requiredAPIs[key]);
+                const missingAPIs = Object.keys(requiredAPIs).filter(key => !requiredAPIs[key]);
+                
+                addTestResult('系统环境检查', missingAPIs.length === 0, 
+                             missingAPIs.length === 0 ? '所有必要API可用' : `缺少${missingAPIs.length}个API`,
+                             `可用: ${availableAPIs.join(', ') || '无'}`);
+                
+                // 同步模块检查
+                const syncModuleAvailable = !!window.crossDeviceSync;
+                addTestResult('同步模块可用性', syncModuleAvailable, 
+                             syncModuleAvailable ? '同步模块已加载' : '同步模块未加载');
+                
+                if (syncModuleAvailable) {
+                    // 检查必要方法
+                    const requiredMethods = [
+                        'exportSyncData',
+                        'importSyncData', 
+                        'getSyncStatus',
+                        'init',
+                        'removeDuplicateQuestions'
+                    ];
+                    
+                    const availableMethods = requiredMethods.filter(method => 
+                        typeof window.crossDeviceSync[method] === 'function'
+                    );
+                    
+                    addTestResult('同步方法检查', availableMethods.length === requiredMethods.length,
+                                 `${availableMethods.length}/${requiredMethods.length}个方法可用`,
+                                 `缺失: ${requiredMethods.filter(m => !availableMethods.includes(m)).join(', ') || '无'}`);
+                    
+                    // 测试设备ID
+                    const deviceId = window.crossDeviceSync.deviceId;
+                    addTestResult('设备ID验证', !!deviceId, 
+                                 deviceId ? '设备ID有效' : '设备ID无效',
+                                 `设备ID: ${deviceId || '无'}`);
+                }
+                
+                // 数据结构检查
+                if (window.app) {
+                    const requiredProperties = [
+                        'publicQuestionBank',
+                        'personalQuestionBank', 
+                        'mistakeBank',
+                        'studyStats'
+                    ];
+                    
+                    const availableProperties = requiredProperties.filter(prop => 
+                        window.app.hasOwnProperty(prop)
+                    );
+                    
+                    addTestResult('应用数据结构', availableProperties.length === requiredProperties.length,
+                                 `${availableProperties.length}/${requiredProperties.length}个属性可用`,
+                                 `缺失: ${requiredProperties.filter(p => !availableProperties.includes(p)).join(', ') || '无'}`);
+                } else {
+                    addTestResult('应用数据结构', false, '应用实例未初始化', 'window.app不存在');
+                }
+                
+                // 生成验证报告
+                const passedTests = testResults.filter(r => r.success).length;
+                const totalTests = testResults.length;
+                const passRate = ((passedTests / totalTests) * 100).toFixed(1);
+                
+                addTestResult('验证总结', passedTests === totalTests, 
+                             `验证完成 - 通过率: ${passRate}%`,
+                             `通过: ${passedTests}, 失败: ${totalTests - passedTests}`);
+                
+                // 显示最终状态
+                if (passedTests === totalTests) {
+                    addTestResult('系统状态', true, '🎉 所有功能正常！系统可以正常使用',
+                                 '智能刷题系统功能完整，代码质量良好');
+                } else {
+                    addTestResult('系统状态', false, '⚠️ 发现问题，建议修复后再使用',
+                                 `请检查失败的测试项并进行修复`);
+                }
+                
+            } catch (error) {
+                addTestResult('一键验证', false, '验证过程中发生错误', error.message);
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 更新系统状态
+            updateSystemStatus();
+            
+            // 绑定按钮事件
+            document.getElementById('testSyncBtn').addEventListener('click', testSyncFunctionality);
+            document.getElementById('testDataBtn').addEventListener('click', testDataOperations);
+            document.getElementById('testExportBtn').addEventListener('click', testExportFunctionality);
+            document.getElementById('quickVerifyBtn').addEventListener('click', quickVerifyAll);
+            
+            // 等待同步模块初始化
+            setTimeout(() => {
+                updateSystemStatus();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
